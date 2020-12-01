@@ -33,7 +33,7 @@ from scipy.ndimage import gaussian_filter # to smooth data
 
 #flags
 DRAWING_MODE = False
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 
 #setup (note: you may want to comment out "fullscreen lines below if using an external monitor")
@@ -472,7 +472,12 @@ class Interface ( App ) :
     def build ( self ) :
         
         return MainLayout () 
-    
+
+    def on_stop( self ):
+        return True
     
 if __name__ == '__main__' :
-    Interface().run()
+    try: 
+        Interface().run()
+    except KeyboardInterrupt: 
+        pass
