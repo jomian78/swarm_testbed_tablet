@@ -18,6 +18,8 @@ Use:
 - Click/touch "Save Map" (along the top) to save png to current directory
 - Click/touch "Deploy / Export" under "Draw Aerial AOI" to send messages via ROS
 - Click/touch "Clear" under "Draw Aerial AOI" to clear map (note this currently clears all types)
+- Click/touch "ROS Configuration" to view target distribution being explored by agents
+- Adjust slider to change drawing line width 
 - Press "Esc" on your keyboard to exit the program
 
 Outputs:

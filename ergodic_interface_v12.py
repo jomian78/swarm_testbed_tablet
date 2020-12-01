@@ -11,20 +11,22 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.graphics import Color , Rectangle , Line
 from kivy.uix.label import Label
-from kivy.config import Config
-from kivy.uix.textinput import TextInput
-from kivy.properties import OptionProperty, ListProperty, StringProperty, BooleanProperty
 from kivy.uix.image import Image as kvImage 
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.popup import Popup
+from kivy.uix.slider import Slider
+from kivy.graphics import Color, Rectangle, Line 
+from kivy.config import Config
+from kivy.uix.textinput import TextInput
+from kivy.properties import OptionProperty, ListProperty, StringProperty, BooleanProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
 
 # other python imports
-# import numpy as np # not currently used anywhere uncommented
-# import cv2 # not currently used anywhere uncommented 
+import numpy as np # not currently used anywhere uncommented
+import cv2 # not currently used anywhere uncommented
+# import matplotlib.pyplot as plt # for debugging
 import os
 import roslibpy # to interface with ros
 
@@ -43,11 +45,38 @@ class ros_interface(object):
     def __init__(self): 
         self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup
         self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet') 
+        self.subscriber = roslibpy.Topic(self.client,'/input','std_msgs/Float32MultiArray') 
+        self.subscriber.subscribe(self.get_map)
         self.client.run()
 
     def publish(self,msg):
         if self.client.is_connected: 
             self.publisher.publish(msg)
+    
+    def get_map(self,msg): 
+        target_dist = msg['data']
+        layout = msg['layout']
+        width = layout['dim'][0]['size']
+        height = layout['dim'][1]['size']
+        target_dist = np.reshape(target_dist,(width,height))
+        self.save_map(target_dist)
+    
+    def save_map(self,target_dist):
+        # load background image
+        background = cv2.imread('raw.png')
+        # convert target_dist to cv2 image
+        target_dist = np.flipud(target_dist) # fix orientation
+        target_dist /= (np.max(target_dist)) 
+        target_dist *= 255
+        target_dist = np.array(target_dist,dtype=np.uint8) 
+        # scale to size of background image
+        h,w, _ = background.shape 
+        resize = cv2.resize(target_dist,(w,h))
+        # convert target_dist to heatmap
+        heatmap = cv2.applyColorMap(resize,9) # heatmaps are 0-12
+        # overlap and save
+        out = cv2.addWeighted(background,0.5,heatmap,0.5,0)
+        cv2.imwrite('dist.png',out)
     
     def __del__(self): 
         self.client.terminate()
@@ -89,6 +118,8 @@ class MainLayout ( BoxLayout ) :
     DRAW_GROUND = BooleanProperty ( defaultvalue = False ) 
     DRAW_RESTRICTED = BooleanProperty ( defaultvalue = False ) 
     
+    draw_weight = 2
+
     
     def build ( self ):
         Clock.schedule_once ( lambda *args: self.print_pos() )
@@ -116,7 +147,7 @@ class MainLayout ( BoxLayout ) :
         self.btnSaveMap = Button ( text = "Save Map" , font_size = 20 )
         self.topLayout.add_widget ( self.btnSaveMap ) 
         self.btnSaveMap.bind ( on_press = self.callbackSave ) 
-        self.btnROSConfig = Button ( text = "ROS Configuration" , font_size = 20 , color = [0.5,0.,0.] )
+        self.btnROSConfig = Button ( text = "ROS Configuration" , font_size = 20 )
         self.topLayout.add_widget ( self.btnROSConfig ) 
         
         # Container for middle UI widgets        
@@ -136,7 +167,7 @@ class MainLayout ( BoxLayout ) :
         self.aerialButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 )  
         self.middleSideLayout.add_widget ( self.aerialButtonContainer  ) 
         self.aerialtoggle = ToggleButton ( text = "DRAW AERIAL AOI" , font_size = 20  , halign = 'center' , group = 'mode_selection' ) 
-        self.aerialButtonContainer .add_widget ( self.aerialtoggle ) 
+        self.aerialButtonContainer.add_widget ( self.aerialtoggle ) 
         self.aerialtoggle.bind ( on_press = self.toggleDrawState ) 
         
         self.aerialRow2 = BoxLayout ( orientation = 'horizontal' , size_hint_y = 0.75 ) 
@@ -146,8 +177,16 @@ class MainLayout ( BoxLayout ) :
         self.aerialDeploy = Button ( text = "DEPLOY / EXPORT" ) 
         self.aerialDeploy.bind ( on_press = self.callbackPublish ) 
         self.aerialRow2.add_widget ( self.aerialDeploy ) 
-        self.aerialButtonContainer .add_widget ( self.aerialRow2 ) 
+        self.aerialButtonContainer.add_widget ( self.aerialRow2 ) 
         
+        self.aerialRow3 = BoxLayout ( orientation = 'vertical' ,  padding = 5 , size_hint_y = 0.5 ) 
+        self.aerialWeight = Slider ( min=1, max=10, value=self.draw_weight ) 
+        self.aerialWeight.bind ( on_touch_move = self.callbackSlider ) 
+        self.aerialRow3.add_widget(self.aerialWeight)
+        self.aerialWeightDisp = Label(text = str(self.aerialWeight.value))
+        self.aerialRow3.add_widget(self.aerialWeightDisp)
+        self.middleSideLayout.add_widget ( self.aerialRow3 ) 
+
         self.groundButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 ) 
         self.middleSideLayout.add_widget ( self.groundButtonContainer  ) 
         self.groundtoggle = ToggleButton ( text = "DRAW GROUND AOI" , font_size = 20  , halign = 'center' , group = 'mode_selection' ) 
@@ -155,24 +194,24 @@ class MainLayout ( BoxLayout ) :
         self.groundtoggle.bind ( on_press = self.toggleDrawState ) 
         
         self.groundRow2 = BoxLayout ( orientation = 'horizontal' , size_hint_y = 0.75 ) 
-        self.groundRow2 .add_widget ( Button ( text = "CLEAR"  , color = [0.5,0.,0.]) ) 
-        self.groundRow2 .add_widget ( Button ( text = "DEPLOY / EXPORT" , color = [0.5,0.,0.] ) ) 
-        self.groundButtonContainer .add_widget ( self.groundRow2  ) 
+        self.groundRow2.add_widget ( Button ( text = "CLEAR"  , color = [0.5,0.,0.]) ) 
+        self.groundRow2.add_widget ( Button ( text = "DEPLOY / EXPORT" , color = [0.5,0.,0.] ) ) 
+        self.groundButtonContainer.add_widget ( self.groundRow2  ) 
         
         self.restrictedButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 ) 
         self.middleSideLayout.add_widget ( self.restrictedButtonContainer  ) 
         self.restrictedtoggle = ToggleButton ( text = "DRAW RESTRICTED AREA" , font_size = 20  , halign = 'center' , group = 'mode_selection' ) 
-        self.restrictedButtonContainer .add_widget ( self.restrictedtoggle ) 
+        self.restrictedButtonContainer.add_widget ( self.restrictedtoggle ) 
         self.restrictedtoggle.bind ( on_press = self.toggleDrawState )
         
         self.restrictedRow2 = BoxLayout ( orientation = 'horizontal' , size_hint_y = 0.75 ) 
-        self.restrictedRow2  .add_widget ( Button ( text = "CLEAR" , color = [0.5,0.,0.]) )
-        self.restrictedRow2  .add_widget ( Button ( text = "DEPLOY / EXPORT" , color = [0.5,0.,0.]) ) 
+        self.restrictedRow2.add_widget ( Button ( text = "CLEAR" , color = [0.5,0.,0.]) )
+        self.restrictedRow2.add_widget ( Button ( text = "DEPLOY / EXPORT" , color = [0.5,0.,0.]) ) 
         self.restrictedButtonContainer.add_widget ( self.restrictedRow2   ) 
        
         self.DeployAllButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 ) 
         
-        self.DeployAllButtonContainer .add_widget ( Button ( text = "DEPLOY ALL UNITS" , font_size = 20 , halign = 'center' , color = [0.5,0.,0.] ) ) 
+        self.DeployAllButtonContainer.add_widget ( Button ( text = "DEPLOY ALL UNITS" , font_size = 20 , halign = 'center' , color = [0.5,0.,0.] ) ) 
         self.middleSideLayout.add_widget ( Label ( text = "" ) ) 
         self.middleSideLayout.add_widget ( self.DeployAllButtonContainer) 
        
@@ -194,7 +233,7 @@ class MainLayout ( BoxLayout ) :
         
         # Build ROS configuration popup
         self.rosConfigPopup = Popup ( title = 'ROS Configuration' , content = Label ( text = 'Placeholder for ROS' ) )
-        self.rosConfigPopup.size_hint = ( 0.5 , 0.5 ) 
+        self.rosConfigPopup.size_hint = ( 0.8 , 0.8 ) 
         #self.rosConfigPopup.bind ( on_dismiss = self.callbackRosConfig )
         #self.rosConfigPopup.open() 
         self.btnROSConfig.bind ( on_press = self.callbackRosConfig ) 
@@ -260,8 +299,10 @@ class MainLayout ( BoxLayout ) :
         self.infoPanel.text = "Click!" 
         
     def callbackRosConfig ( self, event ) :
+        self.rosConfigPopup.content = kvImage ( source = 'dist.png')
+        self.rosConfigPopup.content.reload()
         self.rosConfigPopup.open() 
-        print('Popup', self , 'is being dismissed but is prevented!')
+        # print('Popup', self , 'is being dismissed but is prevented!')
         return True
     
     # Callback functions for aerial buttons
@@ -270,6 +311,11 @@ class MainLayout ( BoxLayout ) :
 
     def callbackClear( self , event ) : 
         self.mainScreen.attemptClear()
+    
+    def callbackSlider( self , event, location ) :
+        MainLayout.draw_weight = int(self.aerialWeight.value)
+        self.aerialWeightDisp.text = str(MainLayout.draw_weight)
+        print('slider adjusted')
 
 # def changeStatusText ( self ) :
 #     self.infopanel.text = self.textInput 
@@ -314,6 +360,7 @@ class DrawingWidget ( Widget ) :
     def attemptPublish ( self ) :
         msg = dict(
             name = 'aerial data',
+            weight = MainLayout.draw_weight*2,
             map_width = MainLayout.mapProperties["map_width"],
             map_height = MainLayout.mapProperties["map_height"],
             x_output = MainLayout.outputX,
@@ -363,7 +410,7 @@ class DrawingWidget ( Widget ) :
                     MainLayout.infoText = str ( 'Ground: x = ' ) + str ( int ( touch.pos [ 0 ] )  ) + str ( ', y = ' ) + str ( int ( touch.pos [ 1 ] ) ) 
                 elif CURRENT_DRAW == 'aerial':
                     Color ( 0.0 , 0.0 , 1.0 )
-                    self.line = Line ( points = [ touch.pos [0] , touch.pos [ 1 ] ] , width = 2 )
+                    self.line = Line ( points = [ touch.pos [0] , touch.pos [ 1 ] ] , width = MainLayout.draw_weight )
                     self.objects.append(self.line)
                     MainLayout.infoText = str ( 'Aerial: x = ' ) + str ( int ( touch.pos [ 0 ] )  ) + str ( ', y = ' ) + str ( int ( touch.pos [ 1 ] ) ) 
                 if CURRENT_DRAW == 'restricted':
