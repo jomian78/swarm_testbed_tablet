@@ -345,12 +345,14 @@ class DrawingWidget ( Widget ) :
         down_sample = cv2.resize(update,(int(w/10),int(h/10)))
         smooth = gaussian_filter(down_sample,sigma=2)
         # normalize to send to ros
-        val = np.array(smooth,dtype = np.float32)
+        val = np.array(smooth.copy(),dtype = np.float32)
         val /= np.sum(val)
         # scale back up for cv2 
         target_dist = val.copy()
-        target_dist /= np.max(target_dist)
-        target_dist *= 255
+        target_dist -= np.min(target_dist) # shift min to 0
+        if np.max(target_dist) > 0: # error handling for empty map
+            target_dist /= np.max(target_dist) # normalize max to 1
+        target_dist *= 255 # rescale to 255 (RGB range)
         target_dist = np.array(target_dist,dtype=np.uint8) 
         # colormap
         up_sample = cv2.resize(target_dist,(w,h))
@@ -402,7 +404,7 @@ class DrawingWidget ( Widget ) :
             global CURRENT_DRAW 
                 
             with self.canvas :
-                print (  ) 
+                # print (  ) 
                 if CURRENT_DRAW == 'none' :
                     pass
                 elif CURRENT_DRAW == 'ground':
