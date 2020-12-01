@@ -29,6 +29,7 @@ import cv2 # not currently used anywhere uncommented
 # import matplotlib.pyplot as plt # for debugging
 import os
 import roslibpy # to interface with ros
+from scipy.ndimage import gaussian_filter # to smooth data
 
 #flags
 DRAWING_MODE = False
@@ -45,38 +46,11 @@ class ros_interface(object):
     def __init__(self): 
         self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup
         self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet') 
-        self.subscriber = roslibpy.Topic(self.client,'/input','std_msgs/Float32MultiArray') 
-        self.subscriber.subscribe(self.get_map)
         self.client.run()
 
     def publish(self,msg):
         if self.client.is_connected: 
             self.publisher.publish(msg)
-    
-    def get_map(self,msg): 
-        target_dist = msg['data']
-        layout = msg['layout']
-        width = layout['dim'][0]['size']
-        height = layout['dim'][1]['size']
-        target_dist = np.reshape(target_dist,(width,height))
-        self.save_map(target_dist)
-    
-    def save_map(self,target_dist):
-        # load background image
-        background = cv2.imread('raw.png')
-        # convert target_dist to cv2 image
-        target_dist = np.flipud(target_dist) # fix orientation
-        target_dist /= (np.max(target_dist)) 
-        target_dist *= 255
-        target_dist = np.array(target_dist,dtype=np.uint8) 
-        # scale to size of background image
-        h,w, _ = background.shape 
-        resize = cv2.resize(target_dist,(w,h))
-        # convert target_dist to heatmap
-        heatmap = cv2.applyColorMap(resize,9) # heatmaps are 0-12
-        # overlap and save
-        out = cv2.addWeighted(background,0.5,heatmap,0.5,0)
-        cv2.imwrite('dist.png',out)
     
     def __del__(self): 
         self.client.terminate()
@@ -118,7 +92,7 @@ class MainLayout ( BoxLayout ) :
     DRAW_GROUND = BooleanProperty ( defaultvalue = False ) 
     DRAW_RESTRICTED = BooleanProperty ( defaultvalue = False ) 
     
-    draw_weight = 2
+    draw_weight = 5
 
     
     def build ( self ):
@@ -315,7 +289,6 @@ class MainLayout ( BoxLayout ) :
     def callbackSlider( self , event, location ) :
         MainLayout.draw_weight = int(self.aerialWeight.value)
         self.aerialWeightDisp.text = str(MainLayout.draw_weight)
-        print('slider adjusted')
 
 # def changeStatusText ( self ) :
 #     self.infopanel.text = self.textInput 
@@ -358,13 +331,42 @@ class DrawingWidget ( Widget ) :
         # cv2.imwrite ( "rgb_output.png" , result)
         
     def attemptPublish ( self ) :
+        # remove background to save drawing then redraw
+        self.background.source = ""
+        self.export_to_png( "drawing.png" )
+        self.background.source = "raw.png"
+        # load figures
+        background = cv2.imread( "raw.png" , 1) # 1 = color
+        draw = cv2.imread("drawing.png",0) # 0 = grayscale
+        # resize figures to match
+        h,w,_ = background.shape 
+        update = cv2.resize(draw,(w,h))
+        # smooth out
+        down_sample = cv2.resize(update,(int(w/10),int(h/10)))
+        smooth = gaussian_filter(down_sample,sigma=2)
+        # normalize to send to ros
+        val = np.array(smooth,dtype = np.float32)
+        val /= np.sum(val)
+        # scale back up for cv2 
+        target_dist = val.copy()
+        target_dist /= np.max(target_dist)
+        target_dist *= 255
+        target_dist = np.array(target_dist,dtype=np.uint8) 
+        # colormap
+        up_sample = cv2.resize(target_dist,(w,h))
+        heatmap = cv2.applyColorMap(up_sample,9) # heatmaps are 0-12
+        # overlap and save
+        out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
+        cv2.imwrite('dist.png',out)
+        # save message
+        val = np.flipud(val)
+        width,height = val.shape
+        val = val.ravel()
         msg = dict(
             name = 'aerial data',
-            weight = MainLayout.draw_weight*2,
-            map_width = MainLayout.mapProperties["map_width"],
-            map_height = MainLayout.mapProperties["map_height"],
-            x_output = MainLayout.outputX,
-            y_output = MainLayout.outputY
+            data = val.tolist(),
+            map_width = width, 
+            map_height = height
             )
         if DEBUG_MODE == False:
             self.ros.publish(msg)
