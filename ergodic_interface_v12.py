@@ -31,10 +31,10 @@ import os
 import roslibpy # to interface with ros
 from scipy.ndimage import gaussian_filter # to smooth data
 
-#flags
+#config
 DRAWING_MODE = False
-DEBUG_MODE = True
-
+DEBUG_MODE = False # set to true to run without ROS
+background_picture_name = "shelby_raw.png"
 
 #setup (note: you may want to comment out "fullscreen lines below if using an external monitor")
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -42,9 +42,11 @@ Window.fullscreen = 'auto'
 # Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
 
 # sets up ros interface
-class ros_interface(object):
+class ros_interface(object): 
     def __init__(self): 
-        self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup
+        self.client = roslibpy.Ros(host='192.168.1.217',port=9090) # manually change this if you have a different setup (wifi)
+        # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
+        # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
         self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet') 
         self.client.run()
 
@@ -255,7 +257,6 @@ class MainLayout ( BoxLayout ) :
         MainLayout.mapProperties["kivy_map_height"] = int ( self.mainScreen.height ) 
         MainLayout.mapProperties["map_width"] = int ( self.mainScreen.width - self.mainScreen.x )
         MainLayout.mapProperties["map_height"] = int ( self.mainScreen.height - self.mainScreen.y )
-
         if DEBUG_MODE:
             print ( "x: " , MainLayout.mapProperties["kivy_x_offset"]  , ", y: " , MainLayout.mapProperties["kivy_y_offset"]  )
             print ( "kw: " , MainLayout.mapProperties["kivy_map_width"]  , ", kh: " , MainLayout.mapProperties["kivy_map_height"]  )
@@ -307,7 +308,7 @@ class DrawingWidget ( Widget ) :
             self.ros = ros_interface()
 
         with self.canvas:
-            self.background = Rectangle ( source = 'raw.png' , size = self.size, pos = self.pos ) 
+            self.background = Rectangle ( source = background_picture_name , size = self.size, pos = self.pos ) 
         
         self.bind ( pos = self.updateBackground , size = self.updateBackground )         
 
@@ -334,19 +335,22 @@ class DrawingWidget ( Widget ) :
         # remove background to save drawing then redraw
         self.background.source = ""
         self.export_to_png( "drawing.png" )
-        self.background.source = "raw.png"
+        self.background.source = background_picture_name
         # load figures
-        background = cv2.imread( "raw.png" , 1) # 1 = color
+        background = cv2.imread( background_picture_name , 1) # 1 = color
         draw = cv2.imread("drawing.png",0) # 0 = grayscale
+        draw = cv2.bitwise_not(draw) # invert image (hvt instead of ied)
         # resize figures to match
         h,w,_ = background.shape 
         update = cv2.resize(draw,(w,h))
         # smooth out
-        down_sample = cv2.resize(update,(int(w/10),int(h/10)))
+        down_sample = cv2.resize(update,(int(w/5),int(h/5)))
         smooth = gaussian_filter(down_sample,sigma=2)
+        up_sample = cv2.resize(smooth,(450,225)) # manually updated to match shelby map
         # normalize to send to ros
-        val = np.array(smooth.copy(),dtype = np.float32)
-        val /= np.sum(val)
+        val = np.array(up_sample.copy(),dtype = np.float32)
+        if np.sum(val) > 0: # error handling for empty page
+            val /= np.sum(val)
         # scale back up for cv2 
         target_dist = val.copy()
         target_dist -= np.min(target_dist) # shift min to 0
@@ -355,8 +359,8 @@ class DrawingWidget ( Widget ) :
         target_dist *= 255 # rescale to 255 (RGB range)
         target_dist = np.array(target_dist,dtype=np.uint8) 
         # colormap
-        up_sample = cv2.resize(target_dist,(w,h))
-        heatmap = cv2.applyColorMap(up_sample,9) # heatmaps are 0-12
+        up_sample_vis = cv2.resize(target_dist,(w,h))
+        heatmap = cv2.applyColorMap(up_sample_vis,9) # heatmaps are 0-12
         # overlap and save
         out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
         cv2.imwrite('dist.png',out)
