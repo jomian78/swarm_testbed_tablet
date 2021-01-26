@@ -44,18 +44,73 @@ Window.fullscreen = 'auto'
 # sets up ros interface
 class ros_interface(object): 
     def __init__(self): 
-        self.client = roslibpy.Ros(host='192.168.1.217',port=9090) # manually change this if you have a different setup (wifi)
+        # self.client = roslibpy.Ros(host='192.168.1.217',port=9090) # manually change this if you have a different setup (wifi)
         # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
         # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
-        self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet') 
-        self.client.run()
+
+        #self.client = roslibpy.Ros(host='localhost', port=9091) #connect to rover_0
+
+        self.client0 = roslibpy.Ros(host='localhost', port=9091) #connect to rover_0
+        self.client1 = roslibpy.Ros(host='localhost', port=9092) #connect to rover_1
+        self.client2 = roslibpy.Ros(host='localhost', port=9093) #connect to rover_2
+        self.client3 = roslibpy.Ros(host='localhost', port=9094) #connect to rover_3
+        self.client4 = roslibpy.Ros(host='localhost', port=9095) #connect to rover_4
+        self.client5 = roslibpy.Ros(host='localhost', port=9096) #connect to rover_5
+        
+        
+        #self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+
+        self.publisher0 = roslibpy.Topic(self.client0,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher1 = roslibpy.Topic(self.client1,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher2 = roslibpy.Topic(self.client2,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher3 = roslibpy.Topic(self.client3,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher4 = roslibpy.Topic(self.client4,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher5 = roslibpy.Topic(self.client5,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+
+        #self.publisher = roslibpy.Topic(self.client,'/INPUT_TOPIC_3','std_msgs/String') # Directly publish to BBN's /INPUT_TOPIC_3
+        
+        #self.client.run()
+
+        self.client0.run()
+        self.client1.run()
+        self.client2.run()
+        self.client3.run()
+        self.client4.run()
+        self.client5.run()
 
     def publish(self,msg):
-        if self.client.is_connected: 
-            self.publisher.publish(msg)
+        # if self.client.is_connected: 
+        #     self.publisher.publish(msg)
+
+        if self.client0.is_connected: 
+            self.publisher0.publish(msg)
+
+        if self.client1.is_connected: 
+            self.publisher1.publish(msg)
+
+        if self.client2.is_connected: 
+            self.publisher2.publish(msg)
+
+        if self.client3.is_connected: 
+            self.publisher3.publish(msg)
+
+        if self.client4.is_connected: 
+            self.publisher4.publish(msg)
+
+        if self.client5.is_connected: 
+            self.publisher5.publish(msg)
+
     
     def __del__(self): 
-        self.client.terminate()
+        #self.client.terminate()
+
+        self.client0.terminate()
+        self.client1.terminate()
+        self.client2.terminate()
+        self.client3.terminate()
+        self.client4.terminate()
+        self.client5.terminate()
+         
 
 # Main GUI interface
 class MainLayout ( BoxLayout ) :
@@ -336,21 +391,29 @@ class DrawingWidget ( Widget ) :
         self.background.source = ""
         self.export_to_png( "drawing.png" )
         self.background.source = background_picture_name
+
         # load figures
         background = cv2.imread( background_picture_name , 1) # 1 = color
         draw = cv2.imread("drawing.png",0) # 0 = grayscale
         draw = cv2.bitwise_not(draw) # invert image (hvt instead of ied)
+
         # resize figures to match
         h,w,_ = background.shape 
         update = cv2.resize(draw,(w,h))
+
         # smooth out
         down_sample = cv2.resize(update,(int(w/5),int(h/5)))
         smooth = gaussian_filter(down_sample,sigma=2)
         up_sample = cv2.resize(smooth,(450,225)) # manually updated to match shelby map
+
         # normalize to send to ros
         val = np.array(up_sample.copy(),dtype = np.float32)
         if np.sum(val) > 0: # error handling for empty page
             val /= np.sum(val)
+
+        # save the output to a csv file (so that it can be manually loaded into the tactic code, or viewed for debugging purposes
+        np.savetxt("val.csv", val, delimiter=",")
+
         # scale back up for cv2 
         target_dist = val.copy()
         target_dist -= np.min(target_dist) # shift min to 0
@@ -358,12 +421,15 @@ class DrawingWidget ( Widget ) :
             target_dist /= np.max(target_dist) # normalize max to 1
         target_dist *= 255 # rescale to 255 (RGB range)
         target_dist = np.array(target_dist,dtype=np.uint8) 
+
         # colormap
         up_sample_vis = cv2.resize(target_dist,(w,h))
         heatmap = cv2.applyColorMap(up_sample_vis,9) # heatmaps are 0-12
+
         # overlap and save
         out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
         cv2.imwrite('dist.png',out)
+
         # save message
         val = np.flipud(val)
         width,height = val.shape
