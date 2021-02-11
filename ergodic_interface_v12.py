@@ -136,8 +136,8 @@ class MainLayout ( BoxLayout ) :
     DRAW_GROUND = BooleanProperty ( defaultvalue = False ) 
     DRAW_RESTRICTED = BooleanProperty ( defaultvalue = False ) 
     
-    draw_weight_attract = 5
-    draw_weight_repel = 5
+    draw_weight_attract = 10 #original default=5
+    draw_weight_repel = 10   #original default=5
 
     
     def build ( self ):
@@ -199,7 +199,7 @@ class MainLayout ( BoxLayout ) :
         # self.attractButtonContainer.add_widget ( self.attractRow2 ) #MOVED BELOW
         
         self.attractRow3 = BoxLayout ( orientation = 'vertical' ,  padding = 5 , size_hint_y = 0.5 ) 
-        self.attractWeight = Slider ( min=1, max=10, value=self.draw_weight_attract ) 
+        self.attractWeight = Slider ( min=1, max=20, value=self.draw_weight_attract )                  #original min,max = 1,10
         self.attractWeight.bind ( on_touch_move = self.callbackSlider_attract ) 
         self.attractRow3.add_widget(self.attractWeight)
         self.attractWeightDisp = Label(text = str(self.attractWeight.value))
@@ -218,7 +218,7 @@ class MainLayout ( BoxLayout ) :
         # self.repelButtonContainer.add_widget ( self.repelRow2  ) 
         
         self.repelRow3 = BoxLayout ( orientation = 'vertical' ,  padding = 5 , size_hint_y = 0.5 ) 
-        self.repelWeight = Slider ( min=1, max=10, value=self.draw_weight_repel ) 
+        self.repelWeight = Slider ( min=1, max=20, value=self.draw_weight_repel )                       #original min,max = 1,10
         self.repelWeight.bind ( on_touch_move = self.callbackSlider_repel ) 
         self.repelRow3.add_widget(self.repelWeight)
         self.repelWeightDisp = Label(text = str(self.repelWeight.value))
@@ -440,23 +440,28 @@ class DrawingWidget ( Widget ) :
         self.background.source = ""
         self.export_to_png( "drawing.png" )
         self.background.source = background_map_name
+
         # load figures
         background = cv2.imread( background_map_name , 1) # 1 = color, 0 = grayscale
         draw = cv2.imread("drawing.png",1) # color order BGR
         attract = draw[:,:,0] # blue
         repel = cv2.bitwise_not(draw[:,:,1]) # green, invert image (hvt/ee instead of ied/dd)
         total = cv2.addWeighted(attract,0.5,repel,0.5,0) # sum again
+
         # resize figures to match
         h,w,_ = background.shape 
         update = cv2.resize(total,(w,h))
+
         # smooth out
         down_sample = cv2.resize(update,(int(w/5),int(h/5)))
         smooth = gaussian_filter(down_sample,sigma=2)
         up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # manually updated to match shelby map
+
         # normalize to send to ros
         val = np.array(up_sample.copy(),dtype = np.float32)
         if np.sum(val) > 0: # error handling for empty page
             val /= np.sum(val)
+
         # scale back up for cv2 
         target_dist = val.copy()
         target_dist -= np.min(target_dist) # shift min to 0
@@ -464,16 +469,22 @@ class DrawingWidget ( Widget ) :
             target_dist /= np.max(target_dist) # normalize max to 1
         target_dist *= 255 # rescale to 255 (RGB range)
         target_dist = np.array(target_dist,dtype=np.uint8) 
+
         # colormap
         up_sample_vis = cv2.resize(target_dist,(w,h))
         heatmap = cv2.applyColorMap(up_sample_vis,9) # heatmaps are 0-12
+
         # overlap and save
         out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
         cv2.imwrite('dist.png',out)
+
         # save message
         val = np.flipud(val)
         width,height = val.shape
         val = val.ravel()
+
+        val = val * 1000 #trying to make sure all info values are > 10^4 (does not work otherwise)
+        
         msg = dict(
             name = 'attract data',
             data = val.tolist(),
@@ -518,7 +529,7 @@ class DrawingWidget ( Widget ) :
                 if CURRENT_DRAW == 'none' :
                     pass
                 elif CURRENT_DRAW == 'repel':
-                    Color ( 0.0 , 1.0 , 0.0 )
+                    Color ( 0.0 , 1.0 , 0.0 ) #currently green, maybe change to red?
                     self.line = Line ( points = [ touch.pos [0] , touch.pos [ 1 ] ] , width = MainLayout.draw_weight_repel )
                     self.objects.append(self.line)
                     MainLayout.infoText = str ( 'Repel: x = ' ) + str ( int ( touch.pos [ 0 ] )  ) + str ( ', y = ' ) + str ( int ( touch.pos [ 1 ] ) ) 
