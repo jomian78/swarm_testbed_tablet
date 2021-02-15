@@ -33,9 +33,13 @@ from scipy.ndimage import gaussian_filter # to smooth data
 
 #config
 DRAWING_MODE = False
-DEBUG_MODE = False # set to true to run without ROS
-background_map_name = "shelby_raw.png"
-background_map_width = 450
+DEBUG_MODE = False  # set to true to run without ROS
+
+# background_map_name = "shelby_raw.png"
+# background_map_width = 450
+# background_map_height = 225
+background_map_name = "game_env.png"
+background_map_width = 225
 background_map_height = 225
 
 #setup (note: you may want to comment out "fullscreen lines below if using an external monitor")
@@ -50,54 +54,66 @@ class ros_interface(object):
         # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
         # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
 
-        self.client0 = roslibpy.Ros(host='localhost',port=9091) #rover_0 client
-        self.client1 = roslibpy.Ros(host='localhost',port=9092) #rover_1 client
-        self.client2 = roslibpy.Ros(host='localhost',port=9093) #rover_2 client
-        self.client3 = roslibpy.Ros(host='localhost',port=9094) #rover_3 client
-        self.client4 = roslibpy.Ros(host='localhost',port=9095) #rover_4 client
-        self.client5 = roslibpy.Ros(host='localhost',port=9096) #rover_5 client
+        self.client = roslibpy.Ros(host='localhost', port=9090) # HumanSwarmCollab
+
         
-        self.publisher0 = roslibpy.Topic(self.client0,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher1 = roslibpy.Topic(self.client1,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher2 = roslibpy.Topic(self.client2,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher3 = roslibpy.Topic(self.client3,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher4 = roslibpy.Topic(self.client4,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher5 = roslibpy.Topic(self.client5,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        # self.client0 = roslibpy.Ros(host='localhost',port=9091) #rover_0 client
+        # self.client1 = roslibpy.Ros(host='localhost',port=9092) #rover_1 client
+        # self.client2 = roslibpy.Ros(host='localhost',port=9093) #rover_2 client
+        # self.client3 = roslibpy.Ros(host='localhost',port=9094) #rover_3 client
+        # self.client4 = roslibpy.Ros(host='localhost',port=9095) #rover_4 client
+        # self.client5 = roslibpy.Ros(host='localhost',port=9096) #rover_5 client
+
+        self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
         
-        self.client0.run()
-        self.client1.run()
-        self.client2.run()
-        self.client3.run()
-        self.client4.run()
-        self.client5.run()
+        # self.publisher0 = roslibpy.Topic(self.client0,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        # self.publisher1 = roslibpy.Topic(self.client1,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        # self.publisher2 = roslibpy.Topic(self.client2,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        # self.publisher3 = roslibpy.Topic(self.client3,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        # self.publisher4 = roslibpy.Topic(self.client4,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        # self.publisher5 = roslibpy.Topic(self.client5,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+
+        self.client.run()
+        # self.client0.run()
+        # self.client1.run()
+        # self.client2.run()
+        # self.client3.run()
+        # self.client4.run()
+        # self.client5.run()
 
     def publish(self,msg):
-        if self.client0.is_connected: 
-            self.publisher0.publish(msg)
+        if self.client.is_connected:
+            print('Publishing data')
+            self.publisher.publish(msg)
+            
+        # if self.client0.is_connected: 
+        #     self.publisher0.publish(msg)
 
-        if self.client1.is_connected: 
-            self.publisher1.publish(msg)
+        # if self.client1.is_connected: 
+        #     self.publisher1.publish(msg)
 
-        if self.client2.is_connected: 
-            self.publisher2.publish(msg)
+        # if self.client2.is_connected: 
+        #     self.publisher2.publish(msg)
 
-        if self.client3.is_connected: 
-            self.publisher3.publish(msg)
+        # if self.client3.is_connected: 
+        #     self.publisher3.publish(msg)
 
-        if self.client4.is_connected: 
-            self.publisher4.publish(msg)
+        # if self.client4.is_connected: 
+        #     self.publisher4.publish(msg)
 
-        if self.client5.is_connected: 
-            self.publisher5.publish(msg)
+        # if self.client5.is_connected: 
+        #     self.publisher5.publish(msg)
             
     
-    def __del__(self): 
-        self.client0.terminate()
-        self.client1.terminate()
-        self.client2.terminate()
-        self.client3.terminate()
-        self.client4.terminate()
-        self.client5.terminate()
+    def __del__(self):
+        self.client.terminate()
+        
+        # self.client0.terminate()
+        # self.client1.terminate()
+        # self.client2.terminate()
+        # self.client3.terminate()
+        # self.client4.terminate()
+        # self.client5.terminate()
 
 # Main GUI interface
 class MainLayout ( BoxLayout ) :
@@ -275,19 +291,24 @@ class MainLayout ( BoxLayout ) :
         # Build map load popup
         self.mapBox = BoxLayout ( orientation = 'vertical' ) 
 
-        self.mapNameBox = BoxLayout ( orientation = 'horizontal'  ) 
-        self.mapName = TextInput ( text = 'shelby_raw.png', multiline=False )
+        self.mapNameBox = BoxLayout ( orientation = 'horizontal'  )
+        
+        #self.mapName = TextInput ( text = 'shelby_raw.png', multiline=False )
+        self.mapName = TextInput ( text = 'game_env.png', multiline=False )
+        
         self.mapNameBox.add_widget(Label( text = 'Map File Name (.png)'))
         self.mapNameBox.add_widget(self.mapName)
         self.mapBox.add_widget ( self.mapNameBox ) 
 
         self.mapWidthBox = BoxLayout ( orientation = 'horizontal'  ) 
-        self.mapWidth = TextInput ( text = '450' , multiline=False)
+        #self.mapWidth = TextInput ( text = '450' , multiline=False)
+        self.mapWidth = TextInput ( text = '225' , multiline=False)
         self.mapWidthBox.add_widget( Label( text = 'Map Width (in points)'))
         self.mapWidthBox.add_widget(self.mapWidth)
         self.mapBox.add_widget ( self.mapWidthBox ) 
 
         self.mapHeightBox = BoxLayout ( orientation = 'horizontal'  ) 
+        #self.mapHeight = TextInput ( text = '225' , multiline=False )
         self.mapHeight = TextInput ( text = '225' , multiline=False )
         self.mapHeightBox.add_widget(Label( text = 'Map Height (in points)'))
         self.mapHeightBox.add_widget(self.mapHeight)
