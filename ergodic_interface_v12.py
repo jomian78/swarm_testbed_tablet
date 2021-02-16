@@ -504,7 +504,9 @@ class DrawingWidget ( Widget ) :
         width,height = val.shape
         val = val.ravel()
 
-        val = val * 1000 #trying to make sure all info values are > 10^4 (does not work otherwise)
+        #val = val * 1000 #trying to make sure all info values are > 10^4 (does not work otherwise)
+        val = val*100000  #works for rviz
+
         
         msg = dict(
             name = 'attract data',
