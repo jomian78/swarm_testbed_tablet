@@ -39,8 +39,8 @@ DEBUG_MODE = False  # set to true to run without ROS
 # background_map_width = 450
 # background_map_height = 225
 background_map_name = "game_env.png"
-background_map_width = 225
-background_map_height = 225
+background_map_width = 50
+background_map_height = 50
 
 #setup (note: you may want to comment out "fullscreen lines below if using an external monitor")
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -300,16 +300,20 @@ class MainLayout ( BoxLayout ) :
         self.mapNameBox.add_widget(self.mapName)
         self.mapBox.add_widget ( self.mapNameBox ) 
 
-        self.mapWidthBox = BoxLayout ( orientation = 'horizontal'  ) 
+        self.mapWidthBox = BoxLayout ( orientation = 'horizontal'  )
+        
         #self.mapWidth = TextInput ( text = '450' , multiline=False)
-        self.mapWidth = TextInput ( text = '225' , multiline=False)
+        self.mapWidth = TextInput ( text = '50' , multiline=False)
+        
         self.mapWidthBox.add_widget( Label( text = 'Map Width (in points)'))
         self.mapWidthBox.add_widget(self.mapWidth)
         self.mapBox.add_widget ( self.mapWidthBox ) 
 
-        self.mapHeightBox = BoxLayout ( orientation = 'horizontal'  ) 
+        self.mapHeightBox = BoxLayout ( orientation = 'horizontal'  )
+        
         #self.mapHeight = TextInput ( text = '225' , multiline=False )
-        self.mapHeight = TextInput ( text = '225' , multiline=False )
+        self.mapHeight = TextInput ( text = '50' , multiline=False )
+        
         self.mapHeightBox.add_widget(Label( text = 'Map Height (in points)'))
         self.mapHeightBox.add_widget(self.mapHeight)
         self.mapBox.add_widget ( self.mapHeightBox ) 
@@ -505,8 +509,8 @@ class DrawingWidget ( Widget ) :
         val = val.ravel()
 
         #val = val * 1000 #trying to make sure all info values are > 10^4 (does not work otherwise)
-        val = val*100000  #works for rviz
-
+        #val = val*100000  #val needs to be this big for the gridmap msg to visually appear in rviz
+        val = val*10
         
         msg = dict(
             name = 'attract data',
