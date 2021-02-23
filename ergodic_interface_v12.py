@@ -31,6 +31,10 @@ import os
 import roslibpy # to interface with ros
 from scipy.ndimage import gaussian_filter # to smooth data
 
+# Arg parsing
+import argparse
+TEAM = 'None'
+
 #config
 DRAWING_MODE = False
 DEBUG_MODE = False  # set to true to run without ROS
@@ -44,8 +48,11 @@ background_map_height = 50
 
 #setup (note: you may want to comment out "fullscreen lines below if using an external monitor")
 cwd = os.path.dirname(os.path.realpath(__file__))
-Window.fullscreen = 'auto'
+
+## The interface works better on a computer (with external monitors attached) if you comment out the lines below (the screen won't jump around when matplotlib plots are open)
+#Window.fullscreen = 'auto'
 # Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
+
 
 # sets up ros interface
 class ros_interface(object): 
@@ -514,6 +521,7 @@ class DrawingWidget ( Widget ) :
         
         msg = dict(
             name = 'attract data',
+            team = TEAM,
             data = val.tolist(),
             map_width = width, 
             map_height = height
@@ -625,6 +633,11 @@ class Interface ( App ) :
         return True
     
 if __name__ == '__main__' :
+    parser = argparse.ArgumentParser()
+    parser.add_argument('team', help='input the team you are controlling (purple or white)', type=str)
+    args = parser.parse_args()
+    TEAM = args.team
+    print('Your team is: {}'.format(TEAM))
     try: 
         Interface().run()
     except KeyboardInterrupt: 
