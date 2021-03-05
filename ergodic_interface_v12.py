@@ -7,6 +7,8 @@ If you want to debug this file without using ROS, just flip the "DEUBG_MODE" fla
 '''
 
 # kivy imports
+from kivy.config import Config
+Config.set('graphics', 'resizable', 'False')
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
@@ -17,11 +19,10 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.popup import Popup
 from kivy.uix.slider import Slider
 from kivy.graphics import Color, Rectangle, Line 
-from kivy.config import Config
 from kivy.uix.textinput import TextInput
 from kivy.properties import OptionProperty, ListProperty, StringProperty, BooleanProperty
 from kivy.clock import Clock
-from kivy.core.window import Window
+from kivy.core.window import Window, WindowBase
 
 # other python imports
 import numpy as np # not currently used anywhere uncommented
@@ -42,7 +43,7 @@ DEBUG_MODE = False  # set to true to run without ROS
 # background_map_name = "shelby_raw.png"
 # background_map_width = 450
 # background_map_height = 225
-background_map_name = "game_env.png"
+background_map_name = "ros_game_env.png"
 background_map_width = 50
 background_map_height = 50
 
@@ -52,7 +53,9 @@ cwd = os.path.dirname(os.path.realpath(__file__))
 ## The interface works better on a computer (with external monitors attached) if you comment out the lines below (the screen won't jump around when matplotlib plots are open)
 #Window.fullscreen = 'auto'
 # Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
-
+# Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
+Window.size = (850, 668)
+max_height = Window.height*0.88
 
 # sets up ros interface
 class ros_interface(object): 
@@ -180,43 +183,44 @@ class MainLayout ( BoxLayout ) :
         
         # Container for top UI widgets
         self.topLayout = BoxLayout ( orientation = 'horizontal' , padding = 2 ) 
-        self.topLayout.size_hint = ( 1.0 , 0.05 ) 
+        self.topLayout.size_hint = ( 1.0 , 0.1 ) 
         
         # Top container widgets
-        self.btnLoadMap = Button ( text = "Load Map" , font_size = 20 )
+        self.btnLoadMap = Button ( text = "Load Map" , font_size = 25 )
         self.topLayout.add_widget ( self.btnLoadMap ) 
         # self.btnLoadMap.bind ( on_press = self.callbackMap ) 
-        self.btnSaveMap = Button ( text = "Save Map" , font_size = 20 )
+        self.btnSaveMap = Button ( text = "Save Map" , font_size = 25 )
         self.topLayout.add_widget ( self.btnSaveMap ) 
         self.btnSaveMap.bind ( on_press = self.callbackSave ) 
-        self.btnROSConfig = Button ( text = "Distribution Overlay" , font_size = 20 )
+        self.btnROSConfig = Button ( text = "Distribution Overlay" , font_size = 25 )
         self.topLayout.add_widget ( self.btnROSConfig ) 
         
         # Container for middle UI widgets        
-        self.middleLayout = BoxLayout ( orientation = 'horizontal' , padding = 5 ) 
-        self.middleLayout.size_hint = ( 1.0 , 0.90 ) 
+        self.middleLayout = BoxLayout ( orientation = 'horizontal' , padding = 5  )# , size = (max_height,max_height), pos = (10,10)) 
+        # self.middleLayout.size_hint = ( 1.0 , 0.90 ) 
         
         # Main drawing widget
         self.mainScreen = DrawingWidget () 
         self.middleLayout.add_widget ( self.mainScreen )
         
         # Container for side panel UI widgets
+        
         self.middleSideLayout = BoxLayout ( orientation = 'vertical' ) 
-        self.middleSideLayout.size_hint_x = ( 0.3 ) 
+        self.middleSideLayout.size_hint_x = ( 0.4 ) 
         self.middleLayout.add_widget ( self.middleSideLayout )
         
         # Side panel widgets
         self.attractButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 )  
         self.middleSideLayout.add_widget ( self.attractButtonContainer  ) 
-        self.attracttoggle = ToggleButton ( text = "DRAW ATTRACT AOI" , font_size = 20  , halign = 'center' , group = 'mode_selection' ) 
+        self.attracttoggle = ToggleButton ( text = "Draw\nAttract" , font_size = 25  , halign = 'center' , group = 'mode_selection' ) 
         self.attractButtonContainer.add_widget ( self.attracttoggle ) 
         self.attracttoggle.bind ( on_press = self.toggleDrawState ) 
         
         self.attractRow2 = BoxLayout ( orientation = 'horizontal'  , padding = 10 , size_hint_y = 0.75 ) 
-        self.attractClear =  Button ( text = "CLEAR MAP" )
+        self.attractClear =  Button ( text = "Clear\n Map" , font_size = 25)
         self.attractClear.bind ( on_press = self.callbackClear ) 
         self.attractRow2.add_widget ( self.attractClear ) 
-        self.attractDeploy = Button ( text = "DEPLOY / EXPORT" ) 
+        self.attractDeploy = Button ( text = "Deploy/\n Export", font_size = 25 ) 
         self.attractDeploy.bind ( on_press = self.callbackPublish ) 
         self.attractRow2.add_widget ( self.attractDeploy ) 
         # self.attractButtonContainer.add_widget ( self.attractRow2 ) #MOVED BELOW
@@ -231,7 +235,7 @@ class MainLayout ( BoxLayout ) :
 
         self.repelButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 ) 
         self.middleSideLayout.add_widget ( self.repelButtonContainer  ) 
-        self.repeltoggle = ToggleButton ( text = "DRAW REPEL AOI" , font_size = 20  , halign = 'center' , group = 'mode_selection' ) 
+        self.repeltoggle = ToggleButton ( text = "Draw\n Repel" , font_size = 25  , halign = 'center' , group = 'mode_selection' ) 
         self.repelButtonContainer.add_widget ( self.repeltoggle )
         self.repeltoggle.bind ( on_press = self.toggleDrawState ) 
         
@@ -253,7 +257,7 @@ class MainLayout ( BoxLayout ) :
 
         # self.restrictedButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 ) 
         # self.middleSideLayout.add_widget ( self.restrictedButtonContainer  ) 
-        # self.restrictedtoggle = ToggleButton ( text = "DRAW RESTRICTED AREA" , font_size = 20  , halign = 'center' , group = 'mode_selection' ) 
+        # self.restrictedtoggle = ToggleButton ( text = "DRAW RESTRICTED AREA" , font_size = 25  , halign = 'center' , group = 'mode_selection' ) 
         # self.restrictedButtonContainer.add_widget ( self.restrictedtoggle ) 
         # self.restrictedtoggle.bind ( on_press = self.toggleDrawState )
         
@@ -265,14 +269,14 @@ class MainLayout ( BoxLayout ) :
 
         # self.DeployAllButtonContainer = BoxLayout ( orientation = 'vertical' , padding = 10 ) 
         
-        # self.DeployAllButtonContainer.add_widget ( Button ( text = "DEPLOY ALL UNITS" , font_size = 20 , halign = 'center' , color = [0.5,0.,0.] ) ) 
+        # self.DeployAllButtonContainer.add_widget ( Button ( text = "DEPLOY ALL UNITS" , font_size = 25 , halign = 'center' , color = [0.5,0.,0.] ) ) 
         # self.middleSideLayout.add_widget ( Label ( text = "" ) ) 
         # self.middleSideLayout.add_widget ( self.DeployAllButtonContainer) 
        
-        self.emergencyButtonContainer = BoxLayout ( orientation = 'horizontal' , padding = 10 , size_hint_y = 0.75 )          
-        self.middleSideLayout.add_widget ( self.emergencyButtonContainer  ) 
-        self.emergencyButtonContainer.add_widget ( Button ( text = "STOP\nALL UNITS" , font_size = 20  , halign = 'center' , color = [0.5,0.,0.] ) ) 
-        self.emergencyButtonContainer.add_widget ( Button ( text = "RECALL\nALL UNITS" , font_size = 20 , halign = 'center', color = [0.5,0.,0.] ) ) 
+        # self.emergencyButtonContainer = BoxLayout ( orientation = 'horizontal' , padding = 10 , size_hint_y = 0.75 )          
+        # self.middleSideLayout.add_widget ( self.emergencyButtonContainer  ) 
+        # self.emergencyButtonContainer.add_widget ( Button ( text = "STOP\nALL UNITS" , font_size = 25  , halign = 'center' , color = [0.5,0.,0.] ) ) 
+        # self.emergencyButtonContainer.add_widget ( Button ( text = "RECALL\nALL UNITS" , font_size = 25 , halign = 'center', color = [0.5,0.,0.] ) ) 
 
         self.bottomLayout = BoxLayout ( orientation = 'horizontal' ) 
         self.bottomLayout.size_hint = ( 1.0 , 0.05 ) 
@@ -282,13 +286,13 @@ class MainLayout ( BoxLayout ) :
         # Add containers to main GUI interface
         self.add_widget ( self.topLayout ) 
         self.add_widget ( self.middleLayout ) 
-        self.add_widget ( self.bottomLayout ) 
+        # self.add_widget ( self.bottomLayout ) 
         
         # Build ROS configuration popup
         self.rosBox = BoxLayout ( orientation = 'vertical' ) 
         self.distPlaceholder = kvImage ()
         self.rosBox.add_widget(self.distPlaceholder)
-        self.btnCloseRos = Button ( text = "CLOSE" , font_size = 20, size_hint = (0.1, 0.1))
+        self.btnCloseRos = Button ( text = "CLOSE" , font_size = 25, size_hint = (0.1, 0.1))
         self.btnCloseRos.bind ( on_press = self.callbackRosConfigClose ) 
         self.rosBox.add_widget ( self.btnCloseRos ) 
         self.rosConfigPopup = Popup ( title = 'Distribution Overlay' , content = self.rosBox , auto_dismiss=False)
@@ -325,7 +329,7 @@ class MainLayout ( BoxLayout ) :
         self.mapHeightBox.add_widget(self.mapHeight)
         self.mapBox.add_widget ( self.mapHeightBox ) 
 
-        self.btnSaveMapName = Button ( text = "OK" , font_size = 20)
+        self.btnSaveMapName = Button ( text = "OK" , font_size = 25)
         self.btnSaveMapName.bind ( on_press = self.callbackChooseMap ) 
         self.mapBox.add_widget ( self.btnSaveMapName ) 
 
@@ -379,6 +383,7 @@ class MainLayout ( BoxLayout ) :
             print ( "x: " , MainLayout.mapProperties["kivy_x_offset"]  , ", y: " , MainLayout.mapProperties["kivy_y_offset"]  )
             print ( "kw: " , MainLayout.mapProperties["kivy_map_width"]  , ", kh: " , MainLayout.mapProperties["kivy_map_height"]  )
             print ( "mw: " , MainLayout.mapProperties["map_width"]  , ", mh: " , MainLayout.mapProperties["map_height"]  )
+            print(Window.size)
         
                 
     # Method to export display as image 
@@ -444,9 +449,9 @@ class DrawingWidget ( Widget ) :
             self.ros = ros_interface()
 
         with self.canvas:
-            self.background = Rectangle ( source = background_map_name , size = self.size, pos = self.pos ) 
+            self.background = Rectangle ( source = background_map_name, size = (max_height,max_height), pos = (10,10) ) #size = self.size, pos = self.pos
         
-        self.bind ( pos = self.updateBackground , size = self.updateBackground )         
+        # self.bind ( pos = self.updateBackground , size = self.updateBackground )         
 
         self.objects = []
 
@@ -634,7 +639,7 @@ class Interface ( App ) :
     
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
-    parser.add_argument('team', help='input the team you are controlling (purple or white)', type=str)
+    parser.add_argument('team', help='input the team you are controlling (blue or red)', type=str)
     args = parser.parse_args()
     TEAM = args.team
     print('Your team is: {}'.format(TEAM))
