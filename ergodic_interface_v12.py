@@ -643,6 +643,12 @@ if __name__ == '__main__' :
     args = parser.parse_args()
     TEAM = args.team
     print('Your team is: {}'.format(TEAM))
+    red_or_blue = args.team
+    if red_or_blue == "blue":
+        TEAM = "purple"
+    else:
+        TEAM = "white"
+    print('Your team is: {} (mapped from {} on the command line)'.format(TEAM, red_or_blue))
     try: 
         Interface().run()
     except KeyboardInterrupt: 
