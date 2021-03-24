@@ -33,14 +33,14 @@ from scipy.ndimage import gaussian_filter # to smooth data
 
 #config
 DRAWING_MODE = False
-DEBUG_MODE = True # set to true to run without ROS
+DEBUG_MODE = False # set to true to run without ROS
 background_map_name = "shelby_raw.png"
 background_map_width = 450
 background_map_height = 225
 
 #setup (note: you may want to comment out "fullscreen lines below if using an external monitor")
 cwd = os.path.dirname(os.path.realpath(__file__))
-Window.fullscreen = True #'auto'
+Window.fullscreen = False #'auto'
 # Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
 
 # sets up ros interface
@@ -339,25 +339,24 @@ class DrawingWidget ( Widget ) :
         # calculate repel distribution
         repel = smaller[:,:,0]
         if np.max(repel) == np.min(repel):
-            repel_val = np.ones((background_map_height,background_map_width))
+            repel_val = np.zeros((background_map_height,background_map_width))
         else:
             # smooth out
-            smooth = gaussian_filter(repel,sigma=2)
-            up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # update to match shelby map
-            repel_val = np.array(up_sample.copy(),dtype=np.float32)
+            r_smooth = gaussian_filter(repel,sigma=2)
+            r_up_sample = cv2.resize(r_smooth,(background_map_width,background_map_height)) # update to match shelby map
+            repel_val = np.array(r_up_sample.copy(),dtype=np.float32)
             repel_val /= np.sum(repel_val)
 
         # calculate attract distribution and scaling
-        scale = np.zeros((background_map_height,background_map_width))
+        scale = np.ones((background_map_height,background_map_width))
         attract = smaller[:,:,1]
         if np.max(attract) == np.min(attract):
             attract_val = np.zeros((background_map_height,background_map_width))
-            attract_scale = np.ones((background_map_height,background_map_width))
         else:
             # smooth out
-            smooth = gaussian_filter(attract,sigma=2)
-            up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # update to match shelby map
-            attract_val = np.array(up_sample.copy(),dtype=np.float32)
+            a_smooth = gaussian_filter(attract,sigma=2)
+            a_up_sample = cv2.resize(a_smooth,(background_map_width,background_map_height)) # update to match shelby map
+            attract_val = np.array(a_up_sample.copy(),dtype=np.float32)
             scale = attract_val.copy()
             # invert attract distribution
             attract_val -= np.max(attract_val)
