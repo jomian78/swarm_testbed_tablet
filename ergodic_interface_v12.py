@@ -46,19 +46,64 @@ Window.fullscreen = False #'auto'
 # sets up ros interface
 class ros_interface(object):
     def __init__(self):
-        self.client = roslibpy.Ros(host='localhost',port=9090) # manually change this if you have a different setup (wifi)
+        #self.client = roslibpy.Ros(host='localhost',port=9090) # manually change this if you have a different setup (wifi)
         # self.client = roslibpy.Ros(host='192.168.1.217',port=9090) # manually change this if you have a different setup (wifi)
         # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
         # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
-        self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.client.run()
+        #self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        #self.client.run()
+
+        self.client0 = roslibpy.Ros(host='localhost', port=9091) #connect to rover_0
+        self.client1 = roslibpy.Ros(host='localhost', port=9092) #connect to rover_1
+        self.client2 = roslibpy.Ros(host='localhost', port=9093) #connect to rover_2
+        self.client3 = roslibpy.Ros(host='localhost', port=9094) #connect to rover_3
+        self.client4 = roslibpy.Ros(host='localhost', port=9095) #connect to rover_4
+        self.client5 = roslibpy.Ros(host='localhost', port=9096) #connect to rover_5
+
+        self.publisher0 = roslibpy.Topic(self.client0,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher1 = roslibpy.Topic(self.client1,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher2 = roslibpy.Topic(self.client2,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher3 = roslibpy.Topic(self.client3,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher4 = roslibpy.Topic(self.client4,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+        self.publisher5 = roslibpy.Topic(self.client5,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
+
+        self.client0.run()
+        self.client1.run()
+        self.client2.run()
+        self.client3.run()
+        self.client4.run()
+        self.client5.run()
 
     def publish(self,msg):
-        if self.client.is_connected:
-            self.publisher.publish(msg)
+        #if self.client.is_connected:
+        #    self.publisher.publish(msg)
+
+        if self.client0.is_connected: 
+            self.publisher0.publish(msg)
+
+        if self.client1.is_connected: 
+            self.publisher1.publish(msg)
+
+        if self.client2.is_connected: 
+            self.publisher2.publish(msg)
+
+        if self.client3.is_connected: 
+            self.publisher3.publish(msg)
+
+        if self.client4.is_connected: 
+            self.publisher4.publish(msg)
+
+        if self.client5.is_connected: 
+            self.publisher5.publish(msg)
 
     def __del__(self):
-        self.client.terminate()
+        #self.client.terminate()
+        self.client0.terminate()
+        self.client1.terminate()
+        self.client2.terminate()
+        self.client3.terminate()
+        self.client4.terminate()
+        self.client5.terminate()
 
 # Main GUI interface
 class MainLayout ( BoxLayout ) :
