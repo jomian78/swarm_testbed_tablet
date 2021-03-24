@@ -26,10 +26,10 @@ from kivy.core.window import Window
 # other python imports
 import numpy as np
 import cv2
-# import matplotlib.pyplot as plt # for debugging
+import matplotlib.pyplot as plt # for debugging
 import os
 import roslibpy # to interface with ros
-from scipy.ndimage import gaussian_filter # to smooth data
+from scipy import ndimage # to smooth data
 
 #config
 DRAWING_MODE = False
@@ -336,37 +336,30 @@ class DrawingWidget ( Widget ) :
         update = cv2.resize(draw,(w,h))
         smaller = cv2.resize(update,(int(w/5),int(h/5)))
 
-        # calculate repel distribution
+        # calculate distributions
         repel = smaller[:,:,0]
-        if np.max(repel) == np.min(repel):
-            repel_val = np.zeros((background_map_height,background_map_width))
-        else:
-            # smooth out
-            r_smooth = gaussian_filter(repel,sigma=2)
-            r_up_sample = cv2.resize(r_smooth,(background_map_width,background_map_height)) # update to match shelby map
-            repel_val = np.array(r_up_sample.copy(),dtype=np.float32)
-            repel_val /= np.sum(repel_val)
-
-        # calculate attract distribution and scaling
-        scale = np.ones((background_map_height,background_map_width))
         attract = smaller[:,:,1]
-        if np.max(attract) == np.min(attract):
-            attract_val = np.zeros((background_map_height,background_map_width))
-        else:
-            # smooth out
-            a_smooth = gaussian_filter(attract,sigma=3)
-            a_up_sample = cv2.resize(a_smooth,(background_map_width,background_map_height)) # update to match shelby map
-            attract_val = np.array(a_up_sample.copy(),dtype=np.float32)
-            scale = attract_val.copy()
-            # invert attract distribution
-            attract_val -= np.max(attract_val)
-            attract_val = np.abs(attract_val)
-            attract_val /= np.sum(attract_val)
+        # smooth out
+        if np.max(repel) == np.min(repel): # attract only
+            smooth = ndimage.gaussian_filter(cv2.bitwise_not(attract),sigma=2)
+        elif np.max(attract) == np.min(attract): # repel only
+            smooth = ndimage.gaussian_filter(repel,sigma=2)
+        else: # combo
+            repel_array = np.array(repel.copy(),dtype=np.float32)
+            repel_array = repel_array**(1/2) # you can change this number scale difference between high and low areas
+            attract_array = np.array(cv2.bitwise_not(attract),dtype=np.float32)
+            total = cv2.addWeighted(attract_array,0.5,repel_array,0.5,0)
+            smooth = ndimage.gaussian_filter(total,sigma=2)
+        up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # update to match shelby map
+        val = np.array(up_sample.copy(),dtype=np.float32)
 
         # combine and normalize to send to ros
-        val = (repel_val + attract_val) * scale
         if np.sum(val) > 0: # error handling for empty page
             val /= np.sum(val)
+        # debugging
+        # print(np.min(repel_val),np.max(repel_val))
+        # print(np.min(attract_val),np.max(attract_val))
+        # print(np.min(val),np.max(val))
 
         # scale back up for cv2
         target_dist = val.copy()
