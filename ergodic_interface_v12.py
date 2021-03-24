@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt # for debugging
 import os
 import roslibpy # to interface with ros
 from scipy import ndimage # to smooth data
+from scipy.ndimage import gaussian_filter # to smooth data
 
 #config
 DRAWING_MODE = False
@@ -373,56 +374,52 @@ class DrawingWidget ( Widget ) :
         self.background.source = ""
         self.export_to_png( "drawing.png" )
         self.background.source = background_map_name
+
         # load figures
         background = cv2.imread( background_map_name , 1) # 1 = color, 0 = grayscale
         draw = cv2.imread("drawing.png",1) # color order BGR
+        attract = draw[:,:,0] # blue
+        repel = cv2.bitwise_not(draw[:,:,1]) # green, invert image (hvt/ee instead of ied/dd)
+        total = cv2.addWeighted(attract,0.5,repel,0.5,0) # sum again
+
         # resize figures to match
-        h,w,_ = background.shape
-        update = cv2.resize(draw,(w,h))
-        smaller = cv2.resize(update,(int(w/5),int(h/5)))
+        h,w,_ = background.shape 
+        update = cv2.resize(total,(w,h))
 
-        # calculate distributions
-        repel = smaller[:,:,0]
-        attract = smaller[:,:,1]
         # smooth out
-        if np.max(repel) == np.min(repel): # attract only
-            smooth = ndimage.gaussian_filter(cv2.bitwise_not(attract),sigma=2)
-        elif np.max(attract) == np.min(attract): # repel only
-            smooth = ndimage.gaussian_filter(repel,sigma=2)
-        else: # combo
-            repel_array = np.array(repel.copy(),dtype=np.float32)
-            repel_array = repel_array**(1/2) # you can change this number scale difference between high and low areas
-            attract_array = np.array(cv2.bitwise_not(attract),dtype=np.float32)
-            total = cv2.addWeighted(attract_array,0.5,repel_array,0.5,0)
-            smooth = ndimage.gaussian_filter(total,sigma=2)
-        up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # update to match shelby map
-        val = np.array(up_sample.copy(),dtype=np.float32)
+        down_sample = cv2.resize(update,(int(w/5),int(h/5)))
+        smooth = gaussian_filter(down_sample,sigma=2)
+        up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # manually updated to match shelby map
 
-        # combine and normalize to send to ros
+        # normalize to send to ros
+        val = np.array(up_sample.copy(),dtype = np.float32)
         if np.sum(val) > 0: # error handling for empty page
             val /= np.sum(val)
-        # debugging
-        # print(np.min(repel_val),np.max(repel_val))
-        # print(np.min(attract_val),np.max(attract_val))
-        # print(np.min(val),np.max(val))
 
-        # scale back up for cv2
+        # scale back up for cv2 
         target_dist = val.copy()
         target_dist -= np.min(target_dist) # shift min to 0
         if np.max(target_dist) > 0: # error handling for empty map
             target_dist /= np.max(target_dist) # normalize max to 1
         target_dist *= 255 # rescale to 255 (RGB range)
-        target_dist = np.array(target_dist,dtype=np.uint8)
+        target_dist = np.array(target_dist,dtype=np.uint8) 
+
         # colormap
         up_sample_vis = cv2.resize(target_dist,(w,h))
         heatmap = cv2.applyColorMap(up_sample_vis,9) # heatmaps are 0-12
+
         # overlap and save
         out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
         cv2.imwrite('dist.png',out)
+
         # save message
         val = np.flipud(val)
         width,height = val.shape
         val = val.ravel()
+
+        # scale values to be greater than 10^4
+        val = val*10
+        
         msg = dict(
             name = 'attract data',
             data = val.tolist(),
