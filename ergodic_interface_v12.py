@@ -354,7 +354,7 @@ class DrawingWidget ( Widget ) :
             attract_val = np.zeros((background_map_height,background_map_width))
         else:
             # smooth out
-            a_smooth = gaussian_filter(attract,sigma=2)
+            a_smooth = gaussian_filter(attract,sigma=3)
             a_up_sample = cv2.resize(a_smooth,(background_map_width,background_map_height)) # update to match shelby map
             attract_val = np.array(a_up_sample.copy(),dtype=np.float32)
             scale = attract_val.copy()
