@@ -9,7 +9,7 @@ pip install opencv-python
 
 
 To run:
-`python3 ergodic_interface_v12 <team>` where <team> is `red` or `blue` depending upon which team you would like to control 
+`python3 ergodic_interface_v12 <team>` where team is `red` or `blue` depending upon which team you would like to control 
 
 Use:
 - Click/Touch "Draw Aerial AOI" 
