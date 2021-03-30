@@ -9,7 +9,7 @@ pip install opencv-python
 
 
 To run:
-python3 ergodic_interface_v12
+`python3 ergodic_interface_v12 <team>` where <team> is `red` or `blue` depending upon which team you would like to control 
 
 Use:
 - Click/Touch "Draw Aerial AOI" 
@@ -36,4 +36,11 @@ Notes:
   - on the ergodic controller side, I added a script to subscribe to the outputs, smooth out the outputs, and send the processed results to the ergodic planner. The coupling between the tablet and the space is a little finicky, so we'll have to make sure we manually set the same inputs for the controller that match the size of the tablet screen. No biggie but something to be aware of 
   - I also wrote a custom message to take the outputs you were saving to the text file. This is actually part of the ergodic controller package, but I've uploaded a copy to this repository for reference
   - the ip address is manually input, so if the network isn't set up for that ip address you'll have to change that (I also put a DEBUG_MODE in to allow you to comment out the ROS stuff while you mess with the gui itself)
-  - the tablet interface stuff is on the "tablet" branch https://github.com/atulletaylor/HumanSwarmCollab/tree/tablet 
+  - the tablet interface stuff is on the "tablet" branch https://github.com/atulletaylor/HumanSwarmCollab/tree/tablet
+
+## Copyright and License
+The implementations of SwarmInterface contained herein are copyright (C) 2021 - 2022 by Joel Meyer, Allison Pinosky, and Thomas Trzpit and are distributed under the terms of the GNU General Public License (GPL) version 3 (or later). Please see the LICENSE for more information.
+
+Contact: joelmeyer@u.northwestern.edu
+
+Lab Info: Todd D. Murphey https://murpheylab.github.io/ Northwestern University
