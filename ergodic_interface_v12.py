@@ -31,18 +31,18 @@ import cv2 # not currently used anywhere uncommented
 import os
 import roslibpy # to interface with ros
 from scipy.ndimage import gaussian_filter # to smooth data
+import sys
 
 # Arg parsing
 import argparse
-TEAM = 'None'
+TEAM = 'None'                      # what team are you controlling?
+HOST = 'None'                      # are you hosting the testbed server/game?
+ADDRESS = 'None'                   # if HOST=no, what ip address will you be connecting to?
 
 #config
 DRAWING_MODE = False
 DEBUG_MODE = False  # set to true to run without ROS
 
-# background_map_name = "shelby_raw.png"
-# background_map_width = 450
-# background_map_height = 225
 background_map_name = "ros_game_env.png"
 background_map_width = 50
 background_map_height = 50
@@ -52,7 +52,6 @@ cwd = os.path.dirname(os.path.realpath(__file__))
 
 ## The interface works better on a computer (with external monitors attached) if you comment out the lines below (the screen won't jump around when matplotlib plots are open)
 #Window.fullscreen = 'auto'
-# Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
 # Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
 Window.size = (850, 668)
 max_height = Window.height*0.88
@@ -64,66 +63,29 @@ class ros_interface(object):
         # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
         # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
 
-        self.client = roslibpy.Ros(host='localhost', port=9090) # HumanSwarmCollab
-
-        
-        # self.client0 = roslibpy.Ros(host='localhost',port=9091) #rover_0 client
-        # self.client1 = roslibpy.Ros(host='localhost',port=9092) #rover_1 client
-        # self.client2 = roslibpy.Ros(host='localhost',port=9093) #rover_2 client
-        # self.client3 = roslibpy.Ros(host='localhost',port=9094) #rover_3 client
-        # self.client4 = roslibpy.Ros(host='localhost',port=9095) #rover_4 client
-        # self.client5 = roslibpy.Ros(host='localhost',port=9096) #rover_5 client
+        if (HOST == 'yes' or not HOST):
+            self.client = roslibpy.Ros(host='localhost', port=9090)
+        elif (HOST == 'no'):
+            if (not ADDRESS):
+                sys.exit("Address should not be set to None if you are not host=no (you are not hosting the game, and therefore need to specify an ip address to connect to")
+            else:
+                self.client = roslibpy.Ros(host=ADDRESS, port=9090)
+        else:
+            print('HOST value is not valid, did you enter yes/no for HOST?')
 
         self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
         
-        # self.publisher0 = roslibpy.Topic(self.client0,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        # self.publisher1 = roslibpy.Topic(self.client1,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        # self.publisher2 = roslibpy.Topic(self.client2,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        # self.publisher3 = roslibpy.Topic(self.client3,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        # self.publisher4 = roslibpy.Topic(self.client4,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        # self.publisher5 = roslibpy.Topic(self.client5,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-
         self.client.run()
-        # self.client0.run()
-        # self.client1.run()
-        # self.client2.run()
-        # self.client3.run()
-        # self.client4.run()
-        # self.client5.run()
 
     def publish(self,msg):
         if self.client.is_connected:
             print('Publishing data')
             self.publisher.publish(msg)
             
-        # if self.client0.is_connected: 
-        #     self.publisher0.publish(msg)
-
-        # if self.client1.is_connected: 
-        #     self.publisher1.publish(msg)
-
-        # if self.client2.is_connected: 
-        #     self.publisher2.publish(msg)
-
-        # if self.client3.is_connected: 
-        #     self.publisher3.publish(msg)
-
-        # if self.client4.is_connected: 
-        #     self.publisher4.publish(msg)
-
-        # if self.client5.is_connected: 
-        #     self.publisher5.publish(msg)
-            
     
     def __del__(self):
         self.client.terminate()
         
-        # self.client0.terminate()
-        # self.client1.terminate()
-        # self.client2.terminate()
-        # self.client3.terminate()
-        # self.client4.terminate()
-        # self.client5.terminate()
 
 # Main GUI interface
 class MainLayout ( BoxLayout ) :
@@ -640,7 +602,10 @@ class Interface ( App ) :
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument('team', help='input the team you are controlling (blue or red)', type=str)
+    parser.add_argument('-host', help='Needed for 2-player games: are you hosting the game? (yes/no)', type=str)
+    parser.add_argument('-address', help='Needed for 2-player games:  if you are not hosting the game, enter the ip address of the host', type=str)
     args = parser.parse_args()
+    
     TEAM = args.team
     print('Your team is: {}'.format(TEAM))
     red_or_blue = args.team
@@ -648,7 +613,14 @@ if __name__ == '__main__' :
         TEAM = "purple"
     else:
         TEAM = "white"
-    print('Your team is: {} (mapped from {} on the command line)'.format(TEAM, red_or_blue))
+    #print('Your team is: {} (mapped from {} on the command line)'.format(TEAM, red_or_blue))
+
+    HOST = args.host
+
+    ADDRESS = args.address
+
+    print('Inputted arguments: {}'.format(vars(args)))
+    
     try: 
         Interface().run()
     except KeyboardInterrupt: 
