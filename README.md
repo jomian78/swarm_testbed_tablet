@@ -9,7 +9,10 @@ pip install opencv-python
 
 
 To run:
-`python3 ergodic_interface_v12 <team>` where team is `red` or `blue` depending upon which team you would like to control 
+`python3 ergodic_interface_v12 <team> <host> <address>` where:
+- team should be `red` or `blue` depending upon which team you would like to control
+- host should be `yes` or `no` depending upon if you are hosting the virtual testbed
+- address is an optional argument (only needed if you are not hosting the game, and need to connect remotely) denoting the ip address you are remotely connecting to 
 
 Use:
 - Click/touch "Draw Attract" to draw attraction regions for your team
@@ -25,7 +28,7 @@ Outputs:
 - coord_output.txt: text file that outputs the dimensions of the map image 
   and the x-y coordinates of drawn inputs in real time 
   (appending as new inputs are added)
-- combined_output.png: image file that combines the drawn AOIs onto the original map
+- combined_output.png: image file that combines the drawn attraction and repulsion regions onto the original map
 
 
 ## Copyright and License
