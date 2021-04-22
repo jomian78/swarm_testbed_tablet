@@ -56,17 +56,18 @@ cwd = os.path.dirname(os.path.realpath(__file__))
 Window.size = (850, 668)
 max_height = Window.height*0.88
 
-# sets up ros interface
-class ros_interface(object): 
+
+class ros_interface(object):
+    """ Sets up the ros interface. """
     def __init__(self): 
         # self.client = roslibpy.Ros(host='192.168.1.217',port=9090) # manually change this if you have a different setup (wifi)
         # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
         # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
 
-        if (HOST == 'yes' or not HOST):
+        if (HOST == 'yes' or not HOST): #(not HOST means if the HOST variable has not been set from the command line)
             self.client = roslibpy.Ros(host='localhost', port=9090)
         elif (HOST == 'no'):
-            if (not ADDRESS):
+            if (not ADDRESS): #we may not need to enter an ADDRESS if both the red and blue player are on the same network
                 sys.exit("Address should not be set to None if you are not host=no (you are not hosting the game, and therefore need to specify an ip address to connect to")
             else:
                 self.client = roslibpy.Ros(host=ADDRESS, port=9090)
@@ -76,6 +77,21 @@ class ros_interface(object):
         self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
         
         self.client.run()
+
+        # initiate the connection service (will be different for red/blue players)
+        if (TEAM == 'red'):
+            self.connection_service = roslibpy.Service(self.client, 'red_connection_service', 'Empty')
+        elif (TEAM == 'blue'):
+            self.connection_service = roslibpy.Service(self.client, 'blue_connection_service', 'Empty')
+        else:
+            print('TEAM value not valid, did you enter red/blue?')
+            sys.exit("TEAM needs to be red/blue")
+        self.request = roslibpy.ServiceRequest()
+
+    # call the connection service
+    def call_connection_service(self):
+        print('Calling service...')
+        result = self.connection_service.call(self.request)
 
     def publish(self,msg):
         if self.client.is_connected:
@@ -150,12 +166,15 @@ class MainLayout ( BoxLayout ) :
         # Top container widgets
         self.btnLoadMap = Button ( text = "Load Map" , font_size = 25 )
         self.topLayout.add_widget ( self.btnLoadMap ) 
-        # self.btnLoadMap.bind ( on_press = self.callbackMap ) 
         self.btnSaveMap = Button ( text = "Save Map" , font_size = 25 )
         self.topLayout.add_widget ( self.btnSaveMap ) 
-        self.btnSaveMap.bind ( on_press = self.callbackSave ) 
+        self.btnSaveMap.bind(on_press = self.callbackSave) 
         self.btnROSConfig = Button ( text = "Distribution Overlay" , font_size = 25 )
-        self.topLayout.add_widget ( self.btnROSConfig ) 
+        self.topLayout.add_widget ( self.btnROSConfig )
+        ## Add button for connecting the player
+        self.btnConnectService = Button(text = "Connect Player", font_size = 25)
+        self.btnConnectService.bind(on_press = self.callbackConnectService)
+        self.topLayout.add_widget(self.btnConnectService) 
         
         # Container for middle UI widgets        
         self.middleLayout = BoxLayout ( orientation = 'horizontal' , padding = 5  )# , size = (max_height,max_height), pos = (10,10)) 
@@ -304,7 +323,8 @@ class MainLayout ( BoxLayout ) :
         
     #def on_infotext ( self , instance , value ) :
         
-    
+    def callbackConnectService(self, event):
+        self.mainScreen.attemptPlayerConnect()
     
     def toggleDrawState ( self , event ) :
         global CURRENT_DRAW
@@ -416,6 +436,9 @@ class DrawingWidget ( Widget ) :
         # self.bind ( pos = self.updateBackground , size = self.updateBackground )         
 
         self.objects = []
+
+    def attemptPlayerConnect(self):
+        self.ros.call_connection_service()
 
     def attemptExport ( self ) :
         self.export_to_png( "source.png" )
