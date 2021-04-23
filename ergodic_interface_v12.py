@@ -80,9 +80,9 @@ class ros_interface(object):
 
         # initiate the connection service (will be different for red/blue players)
         if (TEAM == 'red'):
-            self.connection_service = roslibpy.Service(self.client, 'red_connection_service', 'Empty')
+            self.connection_service_pub = roslibpy.Topic(self.client, 'red_connection_service', 'std_msgs/Empty')
         elif (TEAM == 'blue'):
-            self.connection_service = roslibpy.Service(self.client, 'blue_connection_service', 'Empty')
+            self.connection_service_pub = roslibpy.Topic(self.client, 'blue_connection_service', 'std_msgs/Empty')
         else:
             print('TEAM value not valid, did you enter red/blue?')
             sys.exit("TEAM needs to be red/blue")
@@ -90,8 +90,8 @@ class ros_interface(object):
 
     # call the connection service
     def call_connection_service(self):
-        print('Calling service...')
-        result = self.connection_service.call(self.request)
+        print('Publishing an empty message to the connection service for your team ... ')
+        self.connection_service_pub.publish(roslibpy.Message())
 
     def publish(self,msg):
         if self.client.is_connected:
