@@ -1,12 +1,20 @@
 # Touch Screen Interface Setup
 ## Installation
+Upgrade pip3 to the latest version
 
 Install Kivy:
 Add the Kivy repo: sudo add-apt-repository ppa:kivy-team/kivy
 Install Kivy: sudo apt-get install python3-kivy
+(you can also install Kivy using pip3. This might be the best way to do it if you plan on running the touchscreen interface within a python virtual environment).
+
+Install scipy:
+pip3 install scipy
 
 Install OpenCV:
-pip install opencv-python
+pip3 install opencv-python
+
+Install roslibpy:
+pip3 install roslibpy
 
 ## Networking Setup
 Both players must be on the same local network. The hosting player may have to add a ufw rule to allow incoming connections from the ip address of the non-hosting player.
@@ -17,7 +25,11 @@ For example, if you are the host and the ip address of the other player is 192.1
 To delete the ufw rule when you are done using the testbed, run:
 `sudo delete allow from 192.168.1.1`
 
-If you are using a physical touch screen interface, you may have to add a ufw rule for the ip address of the physical interface. You may also use an ethernet connection.
+If you are using a physical touch screen interface, you may have to add a ufw rule for the ip address of the physical interface.
+
+The hosting player needs to add the IP address and hostname of the non-hosting player's PC to their /etc/hosts file. The hosting player also needs to add the IP addresses and hostnames of any touchscreen devices being used by either the hosting player or non-hosting player to the hosting player's /etc/hosts file.
+
+When the touchscreen application is run, the IP address of the hosting player's PC must be inputted correctly into the -address argument
 
 ## Running the Touch Screen Interface
 
@@ -25,7 +37,7 @@ Run from the command-line:
 `python3 ergodic_interface_v12 <team> -host <yes/no> -address <ip_address>` where:
 - team argument should be `red` or `blue` depending upon which team you would like to control
 - host argument should be `yes` or `no` depending upon if you are the player that is hosting the virtual testbed 
-- if you are not the host (host=no), the address argument denotes the ip address of the hosting player on the local network both players are on 
+- if you are not the host (host=no), the address argument denotes the ip address of the hosting player's PC on the local network both players are on 
 
 Once the touch screen interface has launched:
 - Click/touch "Draw Attract" to draw attraction regions for your team
