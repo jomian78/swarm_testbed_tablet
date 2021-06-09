@@ -1,5 +1,10 @@
 # Touch Screen Interface Setup
 ## Installation
+
+### Installation using requirements.txt
+Run  `python -m pip install -r requirements.txt` to grab the correct version of the python packages needed for running the touchscreen.
+
+### Installation without using requirements.txt
 Upgrade pip3 to the latest version
 
 Install Kivy:
