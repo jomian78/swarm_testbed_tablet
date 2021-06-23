@@ -5,6 +5,8 @@ This file generates a user interface for using a touchscreen to generate distrib
 This file interfaces with ROS over a websocket. Make sure the ip settings below match your config!
 If you want to debug this file without using ROS, just flip the "DEUBG_MODE" flag below to True.
 '''
+import os
+os.environ["KIVY_NO_ARGS"] = "1" #don't let kivy parse our commandline arguments and interfere with them
 
 # kivy imports
 from kivy.config import Config
@@ -28,7 +30,6 @@ from kivy.core.window import Window, WindowBase
 import numpy as np # not currently used anywhere uncommented
 import cv2 # not currently used anywhere uncommented
 # import matplotlib.pyplot as plt # for debugging
-import os
 import roslibpy # to interface with ros
 from scipy.ndimage import gaussian_filter # to smooth data
 import sys
@@ -140,8 +141,8 @@ class MainLayout ( BoxLayout ) :
     DRAW_GROUND = BooleanProperty ( defaultvalue = False ) 
     DRAW_RESTRICTED = BooleanProperty ( defaultvalue = False ) 
     
-    draw_weight_attract = 10 #original default=5
-    draw_weight_repel = 10   #original default=5
+    draw_weight_attract = 20
+    draw_weight_repel = 20 
 
     
     def build ( self ):
@@ -624,9 +625,9 @@ class Interface ( App ) :
     
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
-    parser.add_argument('team', help='input the team you are controlling (blue or red)', type=str)
-    parser.add_argument('-host', help='Needed for 2-player games: are you hosting the game? (yes/no)', type=str)
-    parser.add_argument('-address', help='Needed for 2-player games:  if you are not hosting the game, enter the ip address of the host', type=str)
+    parser.add_argument('--team', help='input the team you are controlling (blue or red)', type=str)
+    parser.add_argument('--host', help='Needed for 2-player games: are you hosting the game? (yes/no)', type=str)
+    parser.add_argument('--address', help='Needed for 2-player games:  if you are not hosting the game, enter the ip address of the host', type=str)
     args = parser.parse_args()
     
     TEAM = args.team

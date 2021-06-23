@@ -1,0 +1,21 @@
+2021/06/04 Suggestions:
+
+Use a json file to load the touch screen parameters so they can just double click the app to load it 
+
+[x] randomly seed agents in the cell, different orientations (small offsets) to make it so that they don't go along the diagonal
+
+Make a separate a ros websocket launch file (so it doesn't have to be closed and reopened)
+
+worth slowing it down for training (needs to be slower for a person starting)
+
+layering colors -> stronger attractions vs. flat colors
+
+bigger environment
+
+training with static biomodal or multimodal so people can see how capture works, how their agents could be captured.
+
+Initial training environment has no adversaries, just targets to drive to or obstacles to steer around.
+
+Erase? with white color; add button
+
+[x] Keep the brush size as max
