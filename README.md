@@ -39,7 +39,7 @@ When the touchscreen application is run, the IP address of the hosting player's 
 ## Running the Touch Screen Interface
 
 Run from the command-line:
-`python3 ergodic_interface_v12 <team> -host <yes/no> -address <ip_address>` where:
+`python3 ergodic_interface_v12 --team <red/blue> --host <yes/no> --address <ip_address>` where:
 - team argument should be `red` or `blue` depending upon which team you would like to control
 - host argument should be `yes` or `no` depending upon if you are the player that is hosting the virtual testbed 
 - if you are not the host (host=no), the address argument denotes the ip address of the hosting player's PC on the local network both players are on 
