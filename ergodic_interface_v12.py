@@ -42,7 +42,8 @@ ADDRESS = 'None'                   # if HOST=no, what ip address will you be con
 
 #config
 DRAWING_MODE = False
-DEBUG_MODE = False  # set to true to run without ROS
+#DEBUG_MODE = False
+DEBUG_MODE = 'None'  # set to true to run without ROS (include the --debug argument when running this script from the command line)
 
 background_map_name = "ros_game_env.png"
 background_map_width = 50
@@ -628,6 +629,7 @@ if __name__ == '__main__' :
     parser.add_argument('--team', help='input the team you are controlling (blue or red)', type=str)
     parser.add_argument('--host', help='Needed for 2-player games: are you hosting the game? (yes/no)', type=str)
     parser.add_argument('--address', help='Needed for 2-player games:  if you are not hosting the game, enter the ip address of the host', type=str)
+    parser.add_argument('--debug', help='Are we in debug mode (enter --debug for True; if True, the touchscreen will not connect to ROS)', action='store_true')
     args = parser.parse_args()
     
     TEAM = args.team
@@ -636,6 +638,8 @@ if __name__ == '__main__' :
     HOST = args.host
 
     ADDRESS = args.address
+
+    DEBUG_MODE = args.debug
 
     print('Inputted arguments: {}'.format(vars(args)))
     

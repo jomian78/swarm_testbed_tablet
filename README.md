@@ -42,7 +42,10 @@ Run from the command-line:
 `python3 ergodic_interface_v12 --team <red/blue> --host <yes/no> --address <ip_address>` where:
 - team argument should be `red` or `blue` depending upon which team you would like to control
 - host argument should be `yes` or `no` depending upon if you are the player that is hosting the virtual testbed 
-- if you are not the host (host=no), the address argument denotes the ip address of the hosting player's PC on the local network both players are on 
+- if you are not the host (host=no), the address argument denotes the ip address of the hosting player's PC on the local network both players are on
+
+If you'd like to run the touchscreen in debug mode without connecting ROS (this is good for getting a feel for how the touchscreen works, testing out a new change you may have made to the user interface, etc.) include `--debug` at the end of the command for running the touchscreen:
+`python3 ergodic_interface_v12 --team <red/blue> --host <yes/no> --address <ip_address> --debug`
 
 Once the touch screen interface has launched:
 - Click/touch "Draw Attract" to draw attraction regions for your team
