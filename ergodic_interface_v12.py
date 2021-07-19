@@ -45,7 +45,7 @@ DRAWING_MODE = False
 #DEBUG_MODE = False
 DEBUG_MODE = 'None'  # set to true to run without ROS (include the --debug argument when running this script from the command line)
 
-background_map_name = "ros_game_env.png"
+background_map_name = "ros_game_env_50_by_50.png"
 background_map_width = 50
 background_map_height = 50
 
