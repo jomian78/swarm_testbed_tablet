@@ -6,7 +6,24 @@ This file interfaces with ROS over a websocket. Make sure the ip settings below 
 If you want to debug this file without using ROS, just flip the "DEUBG_MODE" flag below to True.
 '''
 
-# kivy imports
+## Default python logger (conflicts with kivy Logger)
+import logging
+logging.basicConfig(filename="timestamps.log", level=logging.INFO, filemode="w")
+logger = logging.getLogger().getChild(__name__) 
+#logger = logging.getLogger("touchscreen")
+import time
+START_TIME = time.time()
+
+# other python imports
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt # for debugging
+import os
+import roslibpy # to interface with ros
+from scipy import ndimage # to smooth data
+from scipy.ndimage import gaussian_filter # to smooth data
+
+## kivy imports
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
@@ -22,15 +39,6 @@ from kivy.uix.textinput import TextInput
 from kivy.properties import OptionProperty, ListProperty, StringProperty, BooleanProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
-
-# other python imports
-import numpy as np
-import cv2
-import matplotlib.pyplot as plt # for debugging
-import os
-import roslibpy # to interface with ros
-from scipy import ndimage # to smooth data
-from scipy.ndimage import gaussian_filter # to smooth data
 
 #config
 DRAWING_MODE = False
@@ -75,9 +83,16 @@ class ros_interface(object):
         self.client4.run()
         self.client5.run()
 
+        ## specification counter
+        self.command_counter = 1
+
     def publish(self,msg):
         #if self.client.is_connected:
         #    self.publisher.publish(msg)
+
+        ## logging specification timestamps (added this on 2022/1/25: 12:22pm)
+        logger.info("specification {} timestamp: {}".format(self.command_counter, time.time() - START_TIME))
+        self.command_counter = self.command_counter + 1
 
         if self.client0.is_connected: 
             self.publisher0.publish(msg)
