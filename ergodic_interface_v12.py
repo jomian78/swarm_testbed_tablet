@@ -5,10 +5,29 @@ This file generates a user interface for using a touchscreen to generate distrib
 This file interfaces with ROS over a websocket. Make sure the ip settings below match your config!
 If you want to debug this file without using ROS, just flip the "DEUBG_MODE" flag below to True.
 '''
+## argparser
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--trial", help="what trial # is this?",
+                    type=int)
+parser.add_argument("--tactic", help="what tactic # is this (1,2,3)?",
+                    type=int)
+args = parser.parse_args()
+
+import datetime
+curr_date_time = datetime.datetime.now()
+cmonth = curr_date_time.strftime("%b")
+cday = curr_date_time.strftime("%d")
+chour = curr_date_time.strftime("%H")
+cmin = curr_date_time.strftime("%M")
+csec = curr_date_time.strftime("%S")
+cyear = curr_date_time.strftime("%Y")
 
 ## Default python logger (conflicts with kivy Logger)
 import logging
-logging.basicConfig(filename="timestamps.log", level=logging.INFO, filemode="w")
+logging.basicConfig(filename="{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_timestamps.log".format(cyear, cmonth, cday, chour, cmin, csec, args.trial, args.tactic),
+                    level=logging.INFO,
+                    filemode="w")
 logger = logging.getLogger().getChild(__name__) 
 #logger = logging.getLogger("touchscreen")
 import time
@@ -19,6 +38,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt # for debugging
 import os
+os.environ["KIVY_NO_ARGS"] = "1"
 import roslibpy # to interface with ros
 from scipy import ndimage # to smooth data
 from scipy.ndimage import gaussian_filter # to smooth data
@@ -52,6 +72,10 @@ cwd = os.path.dirname(os.path.realpath(__file__))
 Window.fullscreen = False #'auto'
 # Config.set('graphics', 'fullscreen', 'auto') # this might work depending on your system
 
+## plotting
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+
 # sets up ros interface
 class ros_interface(object):
     def __init__(self):
@@ -83,7 +107,7 @@ class ros_interface(object):
         self.client4.run()
         self.client5.run()
 
-        ## specification counter
+        ## the number of target specifications sent for this trial (counter)
         self.command_counter = 1
 
     def publish(self,msg):
@@ -91,8 +115,9 @@ class ros_interface(object):
         #    self.publisher.publish(msg)
 
         ## logging specification timestamps (added this on 2022/1/25: 12:22pm)
-        logger.info("specification {} timestamp: {}".format(self.command_counter, time.time() - START_TIME))
-        self.command_counter = self.command_counter + 1
+        specification_time = time.time() - START_TIME
+        logger.info("specification {} timestamp: {}".format(self.command_counter, specification_time))
+        #self.command_counter = self.command_counter + 1
 
         if self.client0.is_connected: 
             self.publisher0.publish(msg)
@@ -111,6 +136,28 @@ class ros_interface(object):
 
         if self.client5.is_connected: 
             self.publisher5.publish(msg)
+
+        ## Save the target dist plot
+        fig, ax = plt.subplots()
+        ax.set_title("Target Distribution {}, timestamp {}".format(self.command_counter, specification_time))
+        ax.set_xlabel("x position (degrees longitude)")
+        ax.set_ylabel("y position (degrees latitude)")
+
+        sm = plt.cm.ScalarMappable(Normalize(0,1), cmap='RdBu')
+        sm.set_array(range(0,1))
+        cbar_ax = fig.colorbar(sm, ax=ax, ticks=[0,1])
+        cbar_ax.set_ticklabels(['Low', 'High'])
+        fig.tight_layout()
+
+        mod_data = np.asarray(msg["data"])
+        reshape_data = np.reshape(mod_data, (225, 450))
+        ax.imshow(reshape_data, interpolation=None, cmap="RdBu", origin="lower")
+        #plt.savefig("target_distribution.pdf")
+        plt.savefig("{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_targetdist_{}_timestamp_{}.pdf".format(cyear, cmonth, cday, \
+                                                                                                 chour, cmin, csec, args.trial, args.tactic, self.command_counter, specification_time))
+
+        ## increment the specification counter
+        self.command_counter = self.command_counter + 1
 
     def __del__(self):
         #self.client.terminate()
