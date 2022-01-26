@@ -24,12 +24,14 @@ csec = curr_date_time.strftime("%S")
 cyear = curr_date_time.strftime("%Y")
 
 ## Default python logger (conflicts with kivy Logger)
-import logging
-logging.basicConfig(filename="{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_timestamps.log".format(cyear, cmonth, cday, chour, cmin, csec, args.trial, args.tactic),
-                    level=logging.INFO,
-                    filemode="w")
-logger = logging.getLogger().getChild(__name__) 
+# import logging
+# logging.basicConfig(filename="{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_timestamps.log".format(cyear, cmonth, cday, chour, cmin, csec, args.trial, args.tactic),
+#                     level=logging.INFO,
+#                     filemode="w")
+# logger = logging.getLogger().getChild(__name__)
+
 #logger = logging.getLogger("touchscreen")
+
 import time
 START_TIME = time.time()
 
@@ -114,10 +116,12 @@ class ros_interface(object):
         #if self.client.is_connected:
         #    self.publisher.publish(msg)
 
-        ## logging specification timestamps (added this on 2022/1/25: 12:22pm)
+        ## logging specification timestamps
         specification_time = time.time() - START_TIME
-        logger.info("specification {} timestamp: {}".format(self.command_counter, specification_time))
-        #self.command_counter = self.command_counter + 1
+        #logger.info("specification {} timestamp: {}".format(self.command_counter, specification_time))
+        with open("{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_timestamps.log".format(cyear, cmonth, cday, chour, cmin, csec, args.trial, args.tactic), "a") as f:
+            f.write("specification {} timestamp: {}".format(self.command_counter, specification_time))
+            f.write('\n')
 
         if self.client0.is_connected: 
             self.publisher0.publish(msg)
