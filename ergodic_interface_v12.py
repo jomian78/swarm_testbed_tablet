@@ -23,15 +23,6 @@ cmin = curr_date_time.strftime("%M")
 csec = curr_date_time.strftime("%S")
 cyear = curr_date_time.strftime("%Y")
 
-## Default python logger (conflicts with kivy Logger)
-# import logging
-# logging.basicConfig(filename="{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_timestamps.log".format(cyear, cmonth, cday, chour, cmin, csec, args.trial, args.tactic),
-#                     level=logging.INFO,
-#                     filemode="w")
-# logger = logging.getLogger().getChild(__name__)
-
-#logger = logging.getLogger("touchscreen")
-
 import time
 START_TIME = time.time()
 
@@ -117,10 +108,11 @@ class ros_interface(object):
         #    self.publisher.publish(msg)
 
         ## logging specification timestamps
-        specification_time = time.time() - START_TIME
-        #logger.info("specification {} timestamp: {}".format(self.command_counter, specification_time))
+        current_time = time.time()
+        specification_time = current_time - START_TIME
         with open("{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_timestamps.log".format(cyear, cmonth, cday, chour, cmin, csec, args.trial, args.tactic), "a") as f:
-            f.write("specification {} timestamp: {}".format(self.command_counter, specification_time))
+            f.write("specification {} local timestamp: {}\n".format(self.command_counter, specification_time))
+            f.write("specification {} global timestamp: {}\n".format(self.command_counter, current_time))
             f.write('\n')
 
         if self.client0.is_connected: 
@@ -143,9 +135,9 @@ class ros_interface(object):
 
         ## Save the target dist plot
         fig, ax = plt.subplots()
-        ax.set_title("Target Distribution {}, timestamp {}".format(self.command_counter, specification_time))
-        ax.set_xlabel("x position (degrees longitude)")
-        ax.set_ylabel("y position (degrees latitude)")
+        ax.set_title("Target Distribution {}, timestamp: {}s".format(self.command_counter, specification_time))
+        ax.set_xlabel("x position [m]") #longtidue
+        ax.set_ylabel("y position [m]") #latitude
 
         sm = plt.cm.ScalarMappable(Normalize(0,1), cmap='RdBu')
         sm.set_array(range(0,1))
@@ -156,9 +148,10 @@ class ros_interface(object):
         mod_data = np.asarray(msg["data"])
         reshape_data = np.reshape(mod_data, (225, 450))
         ax.imshow(reshape_data, interpolation=None, cmap="RdBu", origin="lower")
-        #plt.savefig("target_distribution.pdf")
-        plt.savefig("{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_targetdist_{}_timestamp_{}.pdf".format(cyear, cmonth, cday, \
-                                                                                                 chour, cmin, csec, args.trial, args.tactic, self.command_counter, specification_time))
+        plt.savefig("{}_{}_{}_{}_{}_{}_trial_{}_tactic_{}_targetdist_{}_localtimestamp_{}_globaltimestamp_{}.pdf".format(cyear, cmonth, cday, \
+                                                                                                                         chour, cmin, csec, args.trial, \
+                                                                                                                         args.tactic, self.command_counter, \
+                                                                                                                         specification_time, current_time))
 
         ## increment the specification counter
         self.command_counter = self.command_counter + 1
