@@ -476,8 +476,12 @@ class DrawingWidget ( Widget ) :
         width,height = val.shape
         val = val.ravel()
 
-        # scale values to be greater than 10^4
-        val = val*10
+        with open("target_dist_val_check.txt", "a") as f:
+            for i in range(len(val)):
+                f.write("val[{}] in ergodic_interface_v12.py: {}\n".format(i,val[i]))
+            
+        # scale values to be greater than 10^4 -- (2022/2/1: why is this?; are the ied low region values too small?)
+        #val = val*10
         
         msg = dict(
             name = 'attract data',
