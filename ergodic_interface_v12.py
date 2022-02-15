@@ -436,11 +436,18 @@ class DrawingWidget ( Widget ) :
 
         # load figures
         background = cv2.imread( background_map_name , 1) # 1 = color, 0 = grayscale
-        draw = cv2.imread("drawing.png",1) # color order BGR
+        draw = cv2.imread("drawing.png",1) # color order BGR; this is a 3d array, so Blue=[:,:,0], Green=[:,:,1], Red=[:,:,2] (each 0,1,2 denotes a 2d array of blue,red,green values)
+        #np.savetxt("draw.csv", draw)
+        
         attract = draw[:,:,0] # blue
+        np.savetxt("attract.csv", attract)
+        
         repel = cv2.bitwise_not(draw[:,:,1]) # green, invert image (hvt/ee instead of ied/dd)
+        np.savetxt("repel.csv", repel)
+            
         total = cv2.addWeighted(attract,0.5,repel,0.5,0) # sum again
-
+        np.savetxt("total.csv", total)
+        
         # resize figures to match
         h,w,_ = background.shape 
         update = cv2.resize(total,(w,h))
@@ -460,6 +467,9 @@ class DrawingWidget ( Widget ) :
         target_dist -= np.min(target_dist) # shift min to 0
         if np.max(target_dist) > 0: # error handling for empty map
             target_dist /= np.max(target_dist) # normalize max to 1
+        np.savetxt("target_dist.csv", target_dist)
+
+        #send_target_dist = target_dist.copy()
         target_dist *= 255 # rescale to 255 (RGB range)
         target_dist = np.array(target_dist,dtype=np.uint8) 
 
@@ -476,12 +486,17 @@ class DrawingWidget ( Widget ) :
         width,height = val.shape
         val = val.ravel()
 
-        with open("target_dist_val_check.txt", "a") as f:
-            for i in range(len(val)):
-                f.write("val[{}] in ergodic_interface_v12.py: {}\n".format(i,val[i]))
+        #send_target_dist = np.flipud(send_target_dist)
+        #print(np.shape(send_target_dist)) #should we set width and height to this too?
+        #width, height = send_target_dist.shape #try this, if it doesn't work, go back to using val code above
+        #send_target_dist = send_target_dist.ravel()
+
+        #with open("target_dist_val_check.txt", "a") as f:
+        #    for i in range(len(val)):
+        #        f.write("val[{}] in ergodic_interface_v12.py: {}\n".format(i,val[i]))
             
         # scale values to be greater than 10^4 -- (2022/2/1: why is this?; are the ied low region values too small?)
-        #val = val*10
+        val = val*10
         
         msg = dict(
             name = 'attract data',
@@ -489,6 +504,14 @@ class DrawingWidget ( Widget ) :
             map_width = width,
             map_height = height
             )
+
+        # msg = dict(
+        #     name = 'attract data',
+        #     data = send_target_dist.tolist(),
+        #     map_width = width,
+        #     map_height = height
+        #     )
+                
         if DEBUG_MODE == False:
             self.ros.publish(msg)
         else:
