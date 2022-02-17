@@ -12,6 +12,7 @@ parser.add_argument("--trial", help="what trial # is this?",
                     type=int)
 parser.add_argument("--tactic", help="what tactic # is this (1,2,3)?",
                     type=int)
+parser.add_argument("--numRovers", help="numRovers", type=int, default=1)
 args = parser.parse_args()
 
 import datetime
@@ -73,32 +74,20 @@ from matplotlib.colors import Normalize
 class ros_interface(object):
     def __init__(self):
         #self.client = roslibpy.Ros(host='localhost',port=9090) # manually change this if you have a different setup (wifi)
-        # self.client = roslibpy.Ros(host='192.168.1.217',port=9090) # manually change this if you have a different setup (wifi)
-        # self.client = roslibpy.Ros(host='192.168.137.2',port=9090) # manually change this if you have a different setup (hardwired)
-        # self.client = roslibpy.Ros(host='10.0.1.84',port=9090) # manually change this if you have a different setup (rover)
         #self.publisher = roslibpy.Topic(self.client,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
         #self.client.run()
 
-        self.client0 = roslibpy.Ros(host='localhost', port=9091) #connect to rover_0
-        self.client1 = roslibpy.Ros(host='localhost', port=9092) #connect to rover_1
-        self.client2 = roslibpy.Ros(host='localhost', port=9093) #connect to rover_2
-        self.client3 = roslibpy.Ros(host='localhost', port=9094) #connect to rover_3
-        self.client4 = roslibpy.Ros(host='localhost', port=9095) #connect to rover_4
-        self.client5 = roslibpy.Ros(host='localhost', port=9096) #connect to rover_5
+    	#rosHost = 'localhost'
 
-        self.publisher0 = roslibpy.Topic(self.client0,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher1 = roslibpy.Topic(self.client1,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher2 = roslibpy.Topic(self.client2,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher3 = roslibpy.Topic(self.client3,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher4 = roslibpy.Topic(self.client4,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-        self.publisher5 = roslibpy.Topic(self.client5,'/tablet_comm','ergodic_humanswarmcollab_sim/tablet')
-
-        self.client0.run()
-        self.client1.run()
-        self.client2.run()
-        self.client3.run()
-        self.client4.run()
-        self.client5.run()
+        rosHost = '129.105.69.73'
+        numRovers = args.numRovers
+        base_port = 9091
+        self.client = []
+        self.publisher = []
+        for idx in range(numRovers):
+            self.client.append(roslibpy.Ros(host=rosHost, port=base_port+idx)) # connect to rover
+            self.publisher.append(roslibpy.Topic(self.client[-1],'/tablet_comm','ergodic_humanswarmcollab_sim/tablet'))
+            self.client[-1].run()
 
         ## the number of target specifications sent for this trial (counter)
         self.command_counter = 1
@@ -115,23 +104,9 @@ class ros_interface(object):
             f.write("specification {} global timestamp: {}\n".format(self.command_counter, current_time))
             f.write('\n')
 
-        if self.client0.is_connected: 
-            self.publisher0.publish(msg)
-
-        if self.client1.is_connected: 
-            self.publisher1.publish(msg)
-
-        if self.client2.is_connected: 
-            self.publisher2.publish(msg)
-
-        if self.client3.is_connected: 
-            self.publisher3.publish(msg)
-
-        if self.client4.is_connected: 
-            self.publisher4.publish(msg)
-
-        if self.client5.is_connected: 
-            self.publisher5.publish(msg)
+        for client,publisher in zip(self.client,self.publisher):
+            if client.is_connected:
+                publisher.publish(msg)
 
         ## Save the target dist plot
         fig, ax = plt.subplots()
@@ -157,13 +132,9 @@ class ros_interface(object):
         self.command_counter = self.command_counter + 1
 
     def __del__(self):
-        #self.client.terminate()
-        self.client0.terminate()
-        self.client1.terminate()
-        self.client2.terminate()
-        self.client3.terminate()
-        self.client4.terminate()
-        self.client5.terminate()
+    #self.client.terminate()
+        for client in self.client:
+            client.terminate()
 
 # Main GUI interface
 class MainLayout ( BoxLayout ) :
@@ -438,18 +409,18 @@ class DrawingWidget ( Widget ) :
         background = cv2.imread( background_map_name , 1) # 1 = color, 0 = grayscale
         draw = cv2.imread("drawing.png",1) # color order BGR; this is a 3d array, so Blue=[:,:,0], Green=[:,:,1], Red=[:,:,2] (each 0,1,2 denotes a 2d array of blue,red,green values)
         #np.savetxt("draw.csv", draw)
-        
+
         attract = draw[:,:,0] # blue
         np.savetxt("attract.csv", attract)
-        
+
         repel = cv2.bitwise_not(draw[:,:,1]) # green, invert image (hvt/ee instead of ied/dd)
         np.savetxt("repel.csv", repel)
-            
+
         total = cv2.addWeighted(attract,0.5,repel,0.5,0) # sum again
         np.savetxt("total.csv", total)
-        
+
         # resize figures to match
-        h,w,_ = background.shape 
+        h,w,_ = background.shape
         update = cv2.resize(total,(w,h))
 
         # smooth out
@@ -462,7 +433,7 @@ class DrawingWidget ( Widget ) :
         if np.sum(val) > 0: # error handling for empty page
             val /= np.sum(val)
 
-        # scale back up for cv2 
+        # scale back up for cv2
         target_dist = val.copy()
         target_dist -= np.min(target_dist) # shift min to 0
         if np.max(target_dist) > 0: # error handling for empty map
@@ -471,7 +442,7 @@ class DrawingWidget ( Widget ) :
 
         #send_target_dist = target_dist.copy()
         target_dist *= 255 # rescale to 255 (RGB range)
-        target_dist = np.array(target_dist,dtype=np.uint8) 
+        target_dist = np.array(target_dist,dtype=np.uint8)
 
         # colormap
         up_sample_vis = cv2.resize(target_dist,(w,h))
@@ -494,10 +465,10 @@ class DrawingWidget ( Widget ) :
         #with open("target_dist_val_check.txt", "a") as f:
         #    for i in range(len(val)):
         #        f.write("val[{}] in ergodic_interface_v12.py: {}\n".format(i,val[i]))
-            
+
         # scale values to be greater than 10^4 -- (2022/2/1: why is this?; are the ied low region values too small?)
         val = val*10
-        
+
         msg = dict(
             name = 'attract data',
             data = val.tolist(),
@@ -511,7 +482,7 @@ class DrawingWidget ( Widget ) :
         #     map_width = width,
         #     map_height = height
         #     )
-                
+
         if DEBUG_MODE == False:
             self.ros.publish(msg)
         else:
