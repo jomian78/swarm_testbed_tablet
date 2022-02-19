@@ -13,6 +13,13 @@ parser.add_argument("--trial", help="what trial # is this?",
 parser.add_argument("--tactic", help="what tactic # is this (1,2,3)?",
                     type=int)
 parser.add_argument("--numRovers", help="numRovers", type=int, default=1)
+
+# for saving and loading targets
+parser.add_argument("--save_target", action="store_true", help="are we saving a target?")
+parser.add_argument("--save_target_name", type=str, help="name of saved target (end in .csv)")
+parser.add_argument("--load_target", action="store_true", help="are we loading a target?")
+parser.add_argument("--load_target_name", type=str, help="name of target we want to load (give full filename)")
+parser.add_argument("--debug_mode", action="store_true", help="include this argument if you want to run the touchscreen code without connecting to ros (e.g to save targets).")
 args = parser.parse_args()
 
 import datetime
@@ -56,7 +63,7 @@ from kivy.core.window import Window
 
 #config
 DRAWING_MODE = False
-DEBUG_MODE = False # set to true to run without ROS
+DEBUG_MODE = args.debug_mode # set to true to run without ROS (include --debug_mode when running from command line)
 background_map_name = "shelby_raw.png"
 background_map_width = 450
 background_map_height = 225
@@ -400,74 +407,73 @@ class DrawingWidget ( Widget ) :
         self.export_to_png( "combined_output.png" )
 
     def attemptPublish ( self ) :
-        # remove background to save drawing then redraw
-        self.background.source = ""
-        self.export_to_png( "drawing.png" )
-        self.background.source = background_map_name
+        if args.load_target:
+            val = np.loadtxt("{}".format(args.load_target_name))
 
-        # load figures
-        background = cv2.imread( background_map_name , 1) # 1 = color, 0 = grayscale
-        draw = cv2.imread("drawing.png",1) # color order BGR; this is a 3d array, so Blue=[:,:,0], Green=[:,:,1], Red=[:,:,2] (each 0,1,2 denotes a 2d array of blue,red,green values)
-        #np.savetxt("draw.csv", draw)
+            val = np.flipud(val)
+            width,height = val.shape
+            val = val.ravel()
 
-        attract = draw[:,:,0] # blue
-        np.savetxt("attract.csv", attract)
+            val = val*10
+        else:
+            # remove background to save drawing then redraw
+            self.background.source = ""
+            self.export_to_png( "drawing.png" )
+            self.background.source = background_map_name
 
-        repel = cv2.bitwise_not(draw[:,:,1]) # green, invert image (hvt/ee instead of ied/dd)
-        np.savetxt("repel.csv", repel)
+            # load figures
+            background = cv2.imread( background_map_name , 1) # 1 = color, 0 = grayscale
+            draw = cv2.imread("drawing.png",1) # color order BGR; this is a 3d array, so Blue=[:,:,0], Green=[:,:,1], Red=[:,:,2] (each 0,1,2 denotes a 2d array of blue,red,green values)
 
-        total = cv2.addWeighted(attract,0.5,repel,0.5,0) # sum again
-        np.savetxt("total.csv", total)
+            attract = draw[:,:,0] # blue
 
-        # resize figures to match
-        h,w,_ = background.shape
-        update = cv2.resize(total,(w,h))
+            repel = cv2.bitwise_not(draw[:,:,1]) # green, invert image (hvt/ee instead of ied/dd)
 
-        # smooth out
-        down_sample = cv2.resize(update,(int(w/5),int(h/5)))
-        smooth = gaussian_filter(down_sample,sigma=2)
-        up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # manually updated to match shelby map
+            total = cv2.addWeighted(attract,0.5,repel,0.5,0) # sum again
 
-        # normalize to send to ros
-        val = np.array(up_sample.copy(),dtype = np.float32)
-        if np.sum(val) > 0: # error handling for empty page
-            val /= np.sum(val)
+            # resize figures to match
+            h,w,_ = background.shape
+            update = cv2.resize(total,(w,h))
 
-        # scale back up for cv2
-        target_dist = val.copy()
-        target_dist -= np.min(target_dist) # shift min to 0
-        if np.max(target_dist) > 0: # error handling for empty map
-            target_dist /= np.max(target_dist) # normalize max to 1
-        np.savetxt("target_dist.csv", target_dist)
+            # smooth out
+            down_sample = cv2.resize(update,(int(w/5),int(h/5)))
+            smooth = gaussian_filter(down_sample,sigma=2)
+            up_sample = cv2.resize(smooth,(background_map_width,background_map_height)) # manually updated to match shelby map
 
-        #send_target_dist = target_dist.copy()
-        target_dist *= 255 # rescale to 255 (RGB range)
-        target_dist = np.array(target_dist,dtype=np.uint8)
+            # normalize to send to ros
+            val = np.array(up_sample.copy(),dtype = np.float32)
+            if np.sum(val) > 0: # error handling for empty page
+                val /= np.sum(val)
 
-        # colormap
-        up_sample_vis = cv2.resize(target_dist,(w,h))
-        heatmap = cv2.applyColorMap(up_sample_vis,9) # heatmaps are 0-12
+            # save val for loading later
+            if (args.save_target):
+                np.savetxt("{}".format(args.save_target_name), val)
 
-        # overlap and save
-        out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
-        cv2.imwrite('dist.png',out)
+            # scale back up for cv2
+            target_dist = val.copy()
+            target_dist -= np.min(target_dist) # shift min to 0
+            if np.max(target_dist) > 0: # error handling for empty map
+                target_dist /= np.max(target_dist) # normalize max to 1
 
-        # save message
-        val = np.flipud(val)
-        width,height = val.shape
-        val = val.ravel()
+            #send_target_dist = target_dist.copy()
+            target_dist *= 255 # rescale to 255 (RGB range)
+            target_dist = np.array(target_dist,dtype=np.uint8)
 
-        #send_target_dist = np.flipud(send_target_dist)
-        #print(np.shape(send_target_dist)) #should we set width and height to this too?
-        #width, height = send_target_dist.shape #try this, if it doesn't work, go back to using val code above
-        #send_target_dist = send_target_dist.ravel()
+            # colormap
+            up_sample_vis = cv2.resize(target_dist,(w,h))
+            heatmap = cv2.applyColorMap(up_sample_vis,9) # heatmaps are 0-12
 
-        #with open("target_dist_val_check.txt", "a") as f:
-        #    for i in range(len(val)):
-        #        f.write("val[{}] in ergodic_interface_v12.py: {}\n".format(i,val[i]))
+            # overlap and save
+            out = cv2.addWeighted(background,0.5,heatmap,0.8,0)
+            cv2.imwrite('dist.png',out)
 
-        # scale values to be greater than 10^4 -- (2022/2/1: why is this?; are the ied low region values too small?)
-        val = val*10
+            # save message
+            val = np.flipud(val)
+            width,height = val.shape
+            val = val.ravel()
+
+            # scale values to be greater than 10^4 -- (2022/2/1: why is this?; are the ied low region values too small?)
+            val = val*10
 
         msg = dict(
             name = 'attract data',
@@ -475,13 +481,6 @@ class DrawingWidget ( Widget ) :
             map_width = width,
             map_height = height
             )
-
-        # msg = dict(
-        #     name = 'attract data',
-        #     data = send_target_dist.tolist(),
-        #     map_width = width,
-        #     map_height = height
-        #     )
 
         if DEBUG_MODE == False:
             self.ros.publish(msg)
